@@ -1,0 +1,54 @@
+{
+    "project_title": "ZIM AI: The Future of CX",
+    "sections": [
+        {
+            "id": "1",
+            "title": "Speech & Text Analytics",
+            "type": "Live Scan",
+            "status": "Implemented",
+            "kpi": "100% Sentiment Coverage"
+        },
+        {
+            "id": "2",
+            "title": "AI Summarization",
+            "type": "Typing Effect",
+            "status": "Implemented",
+            "kpi": "3 min Saved per Call"
+        },
+        {
+            "id": "3",
+            "title": "Auto Evaluations",
+            "type": "Form Auto-Fill",
+            "status": "Implemented",
+            "kpi": "Zero Manual QA"
+        },
+        {
+            "id": "4",
+            "title": "Global Translation",
+            "type": "Language Toggle",
+            "status": "Implemented",
+            "kpi": "50+ Languages"
+        },
+        {
+            "id": "5",
+            "title": "Predictive Engagement",
+            "type": "Radar Scan",
+            "status": "Future",
+            "kpi": "20% Conversion Lift"
+        },
+        {
+            "id": "6",
+            "title": "Predictive Routing",
+            "type": "Node Graph",
+            "status": "Future",
+            "kpi": "Best-Agent Match"
+        },
+        {
+            "id": "7",
+            "title": "Agentic Virtual Agents",
+            "type": "Chat Bot",
+            "status": "Future",
+            "kpi": "Autonomous Resolution"
+        }
+    ]
+}
