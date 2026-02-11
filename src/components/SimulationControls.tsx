@@ -12,6 +12,7 @@ interface SimulationControlsProps {
     onPlay: () => void;
     onPause: () => void;
     onStop: () => void;
+    className?: string;
 }
 
 export const SimulationControls: React.FC<SimulationControlsProps> = ({
@@ -19,6 +20,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
     onPlay,
     onPause,
     onStop,
+    className,
 }) => {
     const { setControls } = useFeatureCardContext();
 
@@ -30,7 +32,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
         }
 
         setControls(
-            <div className="flex items-center gap-2 mt-[90px] mr-8"> {/* Aligned with Feature Card Title */}
+            <div className={`flex items-center gap-2 ${className || "mt-[90px] mr-8"}`}> {/* Aligned with Feature Card Title */}
                 {/* Pause/Resume Button */}
                 {state === "playing" ? (
                     <motion.button
@@ -76,7 +78,7 @@ export const SimulationControls: React.FC<SimulationControlsProps> = ({
         );
 
         return () => setControls(null);
-    }, [state, onPlay, onPause, onStop, setControls]);
+    }, [state, onPlay, onPause, onStop, setControls, className]);
 
     // Initial state: Render Big Play Button content in-place (centered in simulation box)
     if (state === "idle") {

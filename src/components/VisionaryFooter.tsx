@@ -217,8 +217,8 @@ export const VisionaryFooter = () => {
                         <div className="h-8 flex items-center">
                             <img src={ZIM_LOGO_URL} alt="ZIM" className="h-full w-auto object-contain opacity-80" />
                         </div>
-                        <div className="text-[10px] tracking-[0.3em] uppercase text-white/40">
-                            UC CC Division · 2026
+                        <div className="text-sm md:text-base font-bold tracking-tight quattro-gradient">
+                            Kfir Frank · Kfir@Frank.ky
                         </div>
                     </div>
 
@@ -231,6 +231,7 @@ export const VisionaryFooter = () => {
                 </div>
 
             </div>
+
 
             {/* Global Animation Styles for this component only */}
             <style jsx global>{`

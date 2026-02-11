@@ -3,58 +3,78 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SimulationControls, SimulationState } from './SimulationControls';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, CheckCircle2, Activity, Zap, Award, Search, FileText, Database, Lock } from 'lucide-react';
 import { ClientOnly } from './ClientOnly';
+import { Users, BarChart3, Award, AlertCircle, ChevronDown, ChevronUp, Phone, TrendingUp } from 'lucide-react';
 
-// --- Configuration ---
-const AUDIT_ITEMS = [
-    { id: 'c1', label: 'Identity Authentication', code: 'ZIM_ID_SEC', duration: 1200 },
-    { id: 'c2', label: 'Compliance Disclosure', code: 'REG_CONF', duration: 1500 },
-    { id: 'c3', label: 'Sentiment Analysis', code: 'NLP_SENT', duration: 1300 },
-    { id: 'c4', label: 'Solution Relevance', code: 'KB_MATCH', duration: 1800 },
-    { id: 'c5', label: 'Security Protocols', code: 'ENC_DATA', duration: 1400 },
+// --- Types ---
+type Phase = 'idle' | 'loading' | 'metrics' | 'leaderboard' | 'drilldown';
+
+interface RepData {
+    id: string;
+    name: string;
+    calls: number;
+    score: number;
+    status: 'good' | 'average' | 'risk';
+    trend: 'up' | 'down' | 'flat';
+}
+
+// --- Data ---
+const REPS: RepData[] = [
+    { id: '1', name: 'David Kim', calls: 38, score: 91, status: 'good', trend: 'up' },
+    { id: '2', name: 'Sarah Miller', calls: 29, score: 85, status: 'good', trend: 'flat' },
+    { id: '3', name: 'Tom Wilson', calls: 22, score: 62, status: 'risk', trend: 'down' },
+    { id: '4', name: 'Jessica Lee', calls: 31, score: 78, status: 'average', trend: 'up' },
 ];
 
+// --- Component ---
 export const EvalBox = () => {
     const [state, setState] = useState<SimulationState>('idle');
-    const [phase, setPhase] = useState<"idle" | "scanning" | "auditing" | "complete">("idle");
-    const [currentAuditId, setCurrentAuditId] = useState<string | null>(null);
-    const [auditResults, setAuditResults] = useState<{ [key: string]: boolean }>({});
-    const [auditScore, setAuditScore] = useState(0);
+    const [phase, setPhase] = useState<Phase>('idle');
+    const [expandedRep, setExpandedRep] = useState<string | null>(null);
 
-    // Refs for safe async loop access
+    // Count-up states for KPIs
+    const [counts, setCounts] = useState({ calls: 0, sentiment: 0, score: 0, risks: 0 });
+
+    // --- Refs ---
     const stateRef = useRef(state);
     stateRef.current = state;
     const isLoopingRef = useRef(false);
 
-    // --- Robust Wait Logic ---
+    // --- Helpers ---
     const wait = async (ms: number) => {
         let passed = 0;
         while (passed < ms) {
             if (stateRef.current === 'idle') throw new Error("STOPPED");
-            if (stateRef.current === 'playing') passed += 100;
-            await new Promise(r => setTimeout(r, 100));
+            if (stateRef.current === 'playing') passed += 50;
+            await new Promise(r => setTimeout(r, 50));
         }
     };
 
     const waitForPlay = async () => {
         while (stateRef.current !== 'playing') {
             if (stateRef.current === 'idle') throw new Error("STOPPED");
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 50));
         }
     };
 
-    const reset = () => {
-        setPhase("idle");
-        setCurrentAuditId(null);
-        setAuditResults({});
-        setAuditScore(0);
+    const animateCount = async (target: number, key: keyof typeof counts, duration: number) => {
+        const steps = 20;
+        const interval = duration / steps;
+        const increment = target / steps;
+
+        for (let i = 1; i <= steps; i++) {
+            if (stateRef.current === 'idle') return;
+            setCounts(prev => ({ ...prev, [key]: Math.min(Math.round(increment * i), target) }));
+            await wait(interval);
+        }
     };
 
-    // --- Main Simulation Loop ---
+    // --- Simulation Loop ---
     useEffect(() => {
         if (state === 'idle') {
-            reset();
+            setPhase('idle');
+            setExpandedRep(null);
+            setCounts({ calls: 0, sentiment: 0, score: 0, risks: 0 });
             return;
         }
 
@@ -66,43 +86,43 @@ export const EvalBox = () => {
                     while (true) {
                         if (stateRef.current === 'idle') break;
 
-                        // 1. Initial State
-                        reset();
-                        setPhase("idle");
+                        // Reset
+                        setPhase('idle');
+                        setExpandedRep(null);
+                        setCounts({ calls: 0, sentiment: 0, score: 0, risks: 0 });
                         await wait(500);
 
-                        // 2. Scanning Mode
+                        // === PHASE 1: LOADING ===
                         await waitForPlay();
-                        setPhase("scanning");
-                        await wait(2500);
+                        setPhase('loading');
+                        await wait(1200);
 
-                        // 3. Auditing Mode
+                        // === PHASE 2: METRICS ===
                         await waitForPlay();
-                        setPhase("auditing");
+                        setPhase('metrics');
+                        // Animate counters concurrently
+                        const metricsAnimations = [
+                            animateCount(142, 'calls', 1000),
+                            animateCount(74, 'sentiment', 1000),
+                            animateCount(81, 'score', 1000),
+                            animateCount(3, 'risks', 600)
+                        ];
+                        await Promise.all(metricsAnimations);
+                        await wait(800);
 
-                        for (const item of AUDIT_ITEMS) {
-                            await waitForPlay();
-                            setCurrentAuditId(item.id);
-                            await wait(item.duration);
-
-                            await waitForPlay();
-                            setAuditResults(prev => ({ ...prev, [item.id]: true }));
-                            setAuditScore(prev => prev + 20);
-                            await wait(400); // Small pause between items
-                        }
-
-                        // 4. Complete
+                        // === PHASE 3: LEADERBOARD ===
                         await waitForPlay();
-                        setCurrentAuditId(null);
-                        setPhase("complete");
-                        await wait(4000); // Show results
+                        setPhase('leaderboard');
+                        await wait(1500);
+
+                        // === PHASE 4: DRILLDOWN (Tom Wilson) ===
+                        await waitForPlay();
+                        setPhase('drilldown');
+                        setExpandedRep('3'); // Tom Wilson
+                        await wait(6000);
                     }
                 } catch (e) {
-                    if (e instanceof Error && e.message === "STOPPED") {
-                        // Clean exit
-                    } else {
-                        console.error(e);
-                    }
+                    if (e instanceof Error && e.message !== "STOPPED") console.error(e);
                 } finally {
                     isLoopingRef.current = false;
                 }
@@ -111,232 +131,250 @@ export const EvalBox = () => {
         }
     }, [state]);
 
+    // --- Render Helpers ---
+    const isActive = state !== 'idle';
+
+    // Skeleton Component
+    const SkeletonRow = () => (
+        <div className="flex items-center gap-4 py-3 border-b border-slate-800/50 animate-pulse">
+            <div className="w-8 h-8 rounded-full bg-slate-800" />
+            <div className="flex-1 space-y-2">
+                <div className="h-3 w-24 bg-slate-800 rounded" />
+                <div className="h-2 w-16 bg-slate-800/60 rounded" />
+            </div>
+            <div className="w-12 h-6 bg-slate-800 rounded" />
+        </div>
+    );
+
     return (
         <ClientOnly>
-            <div className="relative w-full h-full min-h-[450px] bg-slate-950 flex flex-col overflow-hidden border border-violet-500/20 font-sans group">
-
-                {/* Background Infrastructure */}
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(139,92,246,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(139,92,246,0.05)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 opacity-90" />
-
-                {/* Code Telemetry Streams (Animated Background) */}
-                <div className="absolute inset-0 opacity-10 pointer-events-none overflow-hidden font-mono text-[8px] text-violet-400 p-4">
-                    <motion.div
-                        animate={{ y: [-1000, 0] }}
-                        transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-                        className="whitespace-pre"
-                    >
-                        {Array.from({ length: 100 }).map((_, i) => (
-                            <div key={i} className="mb-1">
-                                {`AUDIT_STREAM_0x${i.toString(16).padStart(4, '0')} >> PROTOCOL: ${i % 2 === 0 ? 'ENCRYPTION_OK' : 'HANDSHAKE_VERIFIED'} >> ${Math.random().toString(36).substring(7)}`}
-                            </div>
-                        ))}
-                    </motion.div>
-                </div>
+            <div className={`relative w-full min-h-[400px] bg-slate-950 flex flex-col items-center font-sans select-none transition-all duration-500 ease-in-out ${state === 'idle' ? 'cursor-default' : ''}`}>
 
                 <SimulationControls
                     state={state}
                     onPlay={() => setState('playing')}
                     onPause={() => setState('paused')}
                     onStop={() => setState('idle')}
+                    className="mt-0 mr-4"
                 />
 
-                {/* --- HEADER --- */}
-                <div className="relative z-10 w-full h-14 bg-slate-900/90 backdrop-blur-md border-b border-violet-500/30 flex items-center justify-between px-6 shadow-sm">
-                    <div className="flex items-center gap-4">
-                        <img src="/ZIM80Logo.png" alt="ZIM" className="h-7 w-auto object-contain" />
-                        <div className="h-4 w-px bg-white/20" />
-                        <span className="text-xs font-bold text-violet-400 tracking-[0.2em] uppercase">Audit Intelligence</span>
-                    </div>
+                {/* IDLE STATE OVERLAY */}
+                {state === 'idle' && (
+                    <div className="absolute inset-0 z-40 bg-slate-950/20 backdrop-blur-sm" />
+                )}
 
-                    <div className="flex gap-4 items-center">
-                        <div className="flex items-center gap-2 px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full text-[10px] text-violet-300">
-                            <Activity size={10} className="animate-pulse" />
-                            LIVE_ANALYSIS
-                        </div>
-                        <div className="w-8 h-8 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
-                            <Lock size={14} className="text-violet-400" />
-                        </div>
-                    </div>
-                </div>
+                {/* CONTENT CONTAINER */}
+                <div className="w-full flex-1 p-6 flex flex-col gap-6">
 
-                {/* --- MAIN DASHBOARD AREA --- */}
-                <div className="relative z-10 flex-1 p-6 flex gap-6 h-full">
-
-                    {/* Transcript / Data Feed Section */}
-                    <div className="flex-1 flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-base font-bold text-white flex items-center gap-2">
-                                <FileText size={16} className="text-violet-400" />
-                                Interactive Transcript
-                            </h3>
-                            <div className="text-[10px] font-mono text-slate-500 tracking-wider">REF: AQ-229-X</div>
-                        </div>
-
-                        <div className="flex-1 bg-slate-900/50 border border-white/5 rounded-2xl p-5 relative overflow-hidden backdrop-blur-sm">
-                            <div className="space-y-3">
-                                <div className="flex gap-3">
-                                    <div className="w-7 h-7 shrink-0 rounded-lg bg-zim-teal/20 border border-zim-teal/30 flex items-center justify-center text-[10px] font-bold text-zim-teal">AI</div>
-                                    <div className="flex-1 text-xs text-slate-300 leading-relaxed bg-white/5 p-2.5 rounded-xl rounded-tl-none">
-                                        I can help you with your booking from Shanghai to Los Angeles. I'll verify your account details for security.
-                                    </div>
-                                </div>
-                                <div className="flex gap-3 justify-end">
-                                    <div className="max-w-[80%] text-xs text-slate-300 leading-relaxed bg-violet-500/10 border border-violet-500/20 p-2.5 rounded-xl rounded-tr-none">
-                                        Yes. My ID is Z-8821. I need to ensure compliance with our logistics disclosure policy.
-                                    </div>
-                                    <div className="w-7 h-7 shrink-0 rounded-lg bg-white/10 border border-white/10 flex items-center justify-center text-[10px] font-bold text-white">US</div>
-                                </div>
-                            </div>
-
-                            {/* Deep Scan Ray */}
-                            <AnimatePresence>
-                                {phase === 'scanning' && (
+                    {/* --- KPI ROW --- */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <AnimatePresence>
+                            {(phase === 'metrics' || phase === 'leaderboard' || phase === 'drilldown') && (
+                                <>
+                                    {/* Calls Card */}
                                     <motion.div
-                                        initial={{ top: -100 }}
-                                        animate={{ top: "100%" }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-                                        className="absolute left-0 right-0 h-24 bg-gradient-to-b from-transparent via-violet-500/20 to-transparent pointer-events-none z-20"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.05 }}
+                                        className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex flex-col gap-1"
                                     >
-                                        <div className="h-px w-full bg-violet-400/50 shadow-[0_0_20px_rgba(139,92,246,1)]" />
+                                        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                                            <Phone size={12} /> Calls
+                                        </div>
+                                        <div className="text-2xl font-bold text-white tabular-nums">{counts.calls}</div>
                                     </motion.div>
-                                )}
+
+                                    {/* Sentiment Card */}
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.1 }}
+                                        className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex flex-col gap-1"
+                                    >
+                                        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                                            <TrendingUp size={12} /> Sentiment
+                                        </div>
+                                        <div className="text-2xl font-bold text-emerald-400 tabular-nums">{counts.sentiment}%</div>
+                                    </motion.div>
+
+                                    {/* Score Card */}
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.15 }}
+                                        className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex flex-col gap-1"
+                                    >
+                                        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                                            <Award size={12} /> Avg Score
+                                        </div>
+                                        <div className="text-2xl font-bold text-indigo-400 tabular-nums">{counts.score}</div>
+                                    </motion.div>
+
+                                    {/* Risk Card */}
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.2 }}
+                                        className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex flex-col gap-1"
+                                    >
+                                        <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                                            <AlertCircle size={12} /> At Risk
+                                        </div>
+                                        <div className="text-2xl font-bold text-rose-500 tabular-nums">{counts.risks}</div>
+                                    </motion.div>
+                                </>
+                            )}
+
+                            {/* Loading State for Cards */}
+                            {phase === 'loading' && (
+                                <>
+                                    {[1, 2, 3, 4].map(i => (
+                                        <motion.div
+                                            key={i}
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            exit={{ opacity: 0 }}
+                                            className="bg-slate-900/40 border border-slate-800/50 rounded-xl p-3 h-[74px] animate-pulse"
+                                        />
+                                    ))}
+                                </>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* --- LEADERBOARD --- */}
+                    <div className="w-full relative border border-slate-800 rounded-2xl bg-slate-900/30 backdrop-blur-sm">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-4 py-3 bg-slate-900/80 border-b border-slate-800">
+                            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
+                                <Users size={14} className="text-indigo-400" /> Rep Performance
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                <span className="text-[10px] text-slate-500">On Track</span>
+                                <span className="w-2 h-2 rounded-full bg-rose-500 ml-2" />
+                                <span className="text-[10px] text-slate-500">Risk</span>
+                            </div>
+                        </div>
+
+                        {/* Loading Skeletons */}
+                        {phase === 'loading' && (
+                            <div className="p-4 space-y-2">
+                                <SkeletonRow />
+                                <SkeletonRow />
+                                <SkeletonRow />
+                                <SkeletonRow />
+                            </div>
+                        )}
+
+                        {/* Rows */}
+                        <div className="p-2 space-y-1 w-full">
+                            <AnimatePresence>
+                                {(phase === 'leaderboard' || phase === 'drilldown' || phase === 'metrics') && REPS.map((rep, index) => (
+                                    <motion.div
+                                        key={rep.id}
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.3 + (index * 0.1) }}
+                                        className={`group rounded-lg overflow-hidden border transition-all duration-300 relative
+                                            ${expandedRep === rep.id
+                                                ? 'bg-slate-800/60 border-indigo-500/30 shadow-lg'
+                                                : 'bg-transparent border-transparent hover:bg-slate-800/30'
+                                            }
+                                        `}
+                                    >
+                                        {/* Main Row */}
+                                        <div className="flex items-center p-3 gap-3">
+                                            {/* Avatar / Initials */}
+                                            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-offset-2 ring-offset-slate-950
+                                                ${rep.status === 'risk' ? 'bg-rose-950 text-rose-400 ring-rose-500/20' : 'bg-slate-800 text-slate-300 ring-slate-700/50'}
+                                            `}>
+                                                {rep.name.split(' ').map(n => n[0]).join('')}
+                                            </div>
+
+                                            {/* Name & Calls */}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-semibold text-white truncate">{rep.name}</span>
+                                                    {rep.status === 'risk' && (
+                                                        <span className="px-1.5 py-0.5 rounded text-[9px] bg-rose-500/20 text-rose-400 border border-rose-500/20 uppercase font-bold tracking-wider">
+                                                            Alert
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="text-xs text-slate-500 flex items-center gap-2">
+                                                    <span>{rep.calls} calls</span>
+                                                    <span className="w-1 h-1 rounded-full bg-slate-700" />
+                                                    <span className={rep.trend === 'down' ? 'text-rose-400' : 'text-emerald-400'}>
+                                                        {rep.trend === 'up' ? '↗' : rep.trend === 'down' ? '↘' : '→'} Trend
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            {/* Score */}
+                                            <div className="flex flex-col items-end mr-2">
+                                                <span className={`text-sm font-bold ${rep.score < 70 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                                    {rep.score}
+                                                </span>
+                                                <span className="text-[9px] text-slate-600 uppercase">Score</span>
+                                            </div>
+
+                                            {/* Expand Icon */}
+                                            {rep.id === '3' && ( // Only Tom Wilson expands in this sim
+                                                <motion.div
+                                                    animate={{ rotate: expandedRep === rep.id ? 180 : 0 }}
+                                                    className="opacity-50"
+                                                >
+                                                    <ChevronDown size={14} />
+                                                </motion.div>
+                                            )}
+                                        </div>
+
+                                        {/* Drilling Down Content */}
+                                        <AnimatePresence>
+                                            {expandedRep === rep.id && (
+                                                <motion.div
+                                                    initial={{ height: 0, opacity: 0 }}
+                                                    animate={{ height: 'auto', opacity: 1 }}
+                                                    exit={{ height: 0, opacity: 0 }}
+                                                    className="overflow-hidden bg-slate-950/30 border-t border-slate-700/50"
+                                                >
+                                                    <div className="p-3 space-y-3">
+                                                        <div className="flex items-start gap-2 text-xs text-rose-300 bg-rose-950/20 p-2 rounded border border-rose-500/20">
+                                                            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                                                            <div>
+                                                                <span className="font-bold block mb-0.5">Performance Issue Detected</span>
+                                                                Low objection handling score detected in 5 recent calls.
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-start gap-2 text-xs text-indigo-300 bg-indigo-950/20 p-2 rounded border border-indigo-500/20">
+                                                            <Award size={14} className="mt-0.5 shrink-0" />
+                                                            <div>
+                                                                <span className="font-bold block mb-0.5">AI Recommendation</span>
+                                                                Assign "Handling Price Objections" coaching module.
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex gap-2 mt-1">
+                                                            <button className="flex-1 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-colors">
+                                                                Assign Coaching
+                                                            </button>
+                                                            <button className="flex-1 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors">
+                                                                Listen to Calls
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </motion.div>
+                                ))}
                             </AnimatePresence>
                         </div>
                     </div>
 
-                    {/* Audit Checklist HUD Section */}
-                    <div className="w-64 flex flex-col gap-4">
-                        <div className="relative flex-1 bg-slate-900/60 border border-violet-500/20 rounded-2xl p-4 backdrop-blur-xl flex flex-col">
-                            {/* Decorative HUD Elements */}
-                            <div className="absolute -top-1 -right-1 w-8 h-8 border-t border-r border-violet-500/40 rounded-tr-xl" />
-                            <div className="absolute -bottom-1 -left-1 w-8 h-8 border-b border-l border-violet-500/40 rounded-bl-xl" />
-
-                            <div className="flex items-center justify-between mb-4">
-                                <div className="text-[10px] font-bold text-violet-300 tracking-[0.2em] uppercase">Compliance Audit</div>
-                                <ShieldCheck size={14} className="text-violet-400" />
-                            </div>
-
-                            {/* Checklist Items */}
-                            <div className="flex-1 space-y-3">
-                                {AUDIT_ITEMS.map((item) => {
-                                    const isAuditing = currentAuditId === item.id;
-                                    const isVerified = auditResults[item.id];
-
-                                    return (
-                                        <div key={item.id} className="relative">
-                                            <div className={`p-3 rounded-xl border transition-all duration-300 ${isAuditing ? 'bg-violet-500/10 border-violet-500/50 scale-105' :
-                                                isVerified ? 'bg-emerald-500/5 border-emerald-500/20' :
-                                                    'bg-white/5 border-white/5'
-                                                }`}>
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isVerified ? 'text-emerald-400' : 'text-slate-200'}`}>
-                                                        {item.label}
-                                                    </span>
-                                                    {isVerified && <CheckCircle2 size={12} className="text-emerald-400" />}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <div className="h-1 flex-1 bg-slate-800 rounded-full overflow-hidden">
-                                                        {(isAuditing || isVerified) && (
-                                                            <motion.div
-                                                                initial={{ width: 0 }}
-                                                                animate={{ width: isVerified ? "100%" : "70%" }}
-                                                                transition={{ duration: item.duration / 1000 }}
-                                                                className={`h-full ${isVerified ? 'bg-emerald-400' : 'bg-violet-400 animate-pulse'}`}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <span className="text-[8px] font-mono text-slate-500">{item.code}</span>
-                                                </div>
-                                            </div>
-
-                                            {/* Holographic Stamp Animation */}
-                                            <AnimatePresence>
-                                                {isVerified && (
-                                                    <motion.div
-                                                        initial={{ scale: 3, opacity: 0, rotate: -30 }}
-                                                        animate={{ scale: 1, opacity: 1, rotate: 10 }}
-                                                        exit={{ opacity: 0 }}
-                                                        className="absolute -right-2 top-0 pointer-events-none"
-                                                    >
-                                                        <div className="px-2 py-0.5 border-2 border-emerald-400 font-black text-[9px] text-emerald-400 uppercase tracking-tighter rounded bg-emerald-950/80 -rotate-12">
-                                                            PASSED
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Score Meter Footer */}
-                            <div className="mt-6 pt-4 border-t border-white/5">
-                                <div className="flex items-end justify-between mb-2">
-                                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Quality Score</span>
-                                    <span className="text-2xl font-black text-white font-mono">{auditScore}%</span>
-                                </div>
-                                <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                                    <motion.div
-                                        animate={{ width: `${auditScore}%` }}
-                                        className="h-full bg-gradient-to-r from-violet-500 to-emerald-400"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-
-                {/* --- RESULTS OVERLAY --- */}
-                <AnimatePresence>
-                    {phase === 'complete' && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="absolute inset-0 z-40 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-8"
-                        >
-                            <div className="max-w-md w-full bg-slate-900 border border-violet-500/30 rounded-3xl p-8 flex flex-col items-center shadow-[0_0_80px_rgba(139,92,246,0.2)]">
-                                <motion.div
-                                    initial={{ y: 20, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    transition={{ delay: 0.2 }}
-                                    className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center mb-6 shadow-xl shadow-violet-500/20"
-                                >
-                                    <Award size={48} className="text-white" />
-                                </motion.div>
-
-                                <h4 className="text-2xl font-bold text-white mb-2">Audit Complete</h4>
-                                <p className="text-slate-400 text-center text-sm mb-8 leading-relaxed px-4">
-                                    The automated evaluation engine has verified 100% compliance across all quality parameters.
-                                </p>
-
-                                <div className="grid grid-cols-2 gap-4 w-full mb-8">
-                                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                                        <div className="text-[10px] text-slate-500 font-bold uppercase mb-1">Total Score</div>
-                                        <div className="text-2xl font-black text-white">100/100</div>
-                                    </div>
-                                    <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
-                                        <div className="text-[10px] text-slate-500 font-bold uppercase mb-1">Status</div>
-                                        <div className="text-sm font-bold text-emerald-400 flex items-center gap-1">
-                                            <ShieldCheck size={14} /> CERTIFIED
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <motion.div
-                                    animate={{ opacity: [0.5, 1, 0.5] }}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                    className="text-[10px] font-mono text-violet-400 tracking-[0.3em] uppercase"
-                                >
-                                    Restarting analysis sequence...
-                                </motion.div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
             </div>
         </ClientOnly>
     );

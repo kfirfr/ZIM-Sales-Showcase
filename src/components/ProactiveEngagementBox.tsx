@@ -2,31 +2,39 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { SimulationControls, SimulationState } from './SimulationControls';
-import { motion, useAnimation, AnimatePresence } from 'framer-motion';
-import { MousePointer2, MessageCircle, BarChart3, Users, Zap, UserPlus, ArrowRight, Activity, AlertCircle, CheckCircle2, Globe, Shield } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ClientOnly } from './ClientOnly';
+import { FileText, CheckSquare, Smile, Calendar, Phone, PhoneOff } from 'lucide-react';
 
-type Phase = 'browsing' | 'scoring' | 'engagement' | 'handoff';
+// --- Types ---
+type Phase = 'idle' | 'call_end' | 'processing' | 'summary' | 'delivered';
 
+// --- Data ---
+const TOPICS = ["Rate negotiation", "Q3 volume commitment", "Port congestion concerns"];
+
+const ACTION_ITEMS = [
+    "Send revised quote by Wednesday",
+    "Confirm Savannah slot availability",
+];
+
+const NEXT_STEPS = "Follow-up call scheduled Feb 18";
+
+// --- Component ---
 export const ProactiveEngagementBox = () => {
     const [state, setState] = useState<SimulationState>('idle');
-    const [phase, setPhase] = useState<Phase>('browsing');
+    const [phase, setPhase] = useState<Phase>('idle');
+    const [processingText, setProcessingText] = useState("");
+    const [scanlineProgress, setScanlineProgress] = useState(0);
+    const [visibleSections, setVisibleSections] = useState(0);
+    const [showDelivered, setShowDelivered] = useState(false);
 
-    // Simulation Data
-    const [scrollProgress, setScrollProgress] = useState(0);
-    const [intentScore, setIntentScore] = useState(20);
-    const [showHandoffCard, setShowHandoffCard] = useState(false);
-
-    // Animation Controls
-    const scrollControls = useAnimation();
-    const cursorControls = useAnimation();
+    // --- Refs ---
     const stateRef = useRef(state);
     stateRef.current = state;
     const isLoopingRef = useRef(false);
 
     // --- Helpers ---
     const wait = async (ms: number) => {
-        const start = Date.now();
         let passed = 0;
         while (passed < ms) {
             if (stateRef.current === 'idle') throw new Error("STOPPED");
@@ -38,23 +46,50 @@ export const ProactiveEngagementBox = () => {
     const waitForPlay = async () => {
         while (stateRef.current !== 'playing') {
             if (stateRef.current === 'idle') throw new Error("STOPPED");
-            await new Promise(r => setTimeout(r, 100));
+            await new Promise(r => setTimeout(r, 50));
         }
     };
 
-    const reset = () => {
-        setPhase('browsing');
-        setScrollProgress(0);
-        setIntentScore(20);
-        setShowHandoffCard(false);
-        scrollControls.set({ y: 0 });
-        cursorControls.set({ opacity: 0, x: 200, y: 300 });
+    // --- Reset ---
+    const resetAll = () => {
+        setPhase('idle');
+        setProcessingText("");
+        setScanlineProgress(0);
+        setVisibleSections(0);
+        setShowDelivered(false);
     };
+
+    // --- Scanline animation (runs independently during processing) ---
+    useEffect(() => {
+        if (phase !== 'processing' || state === 'idle') {
+            setScanlineProgress(0);
+            return;
+        }
+        let raf: number;
+        let start: number | null = null;
+        const duration = 3500; // ms for full sweep
+
+        const tick = (timestamp: number) => {
+            if (stateRef.current === 'idle') return;
+            if (start === null) start = timestamp;
+
+            if (stateRef.current === 'playing') {
+                const elapsed = timestamp - start;
+                const progress = Math.min(elapsed / duration, 1);
+                setScanlineProgress(progress);
+                if (progress >= 1) return;
+            }
+            raf = requestAnimationFrame(tick);
+        };
+
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [phase, state]);
 
     // --- Simulation Loop ---
     useEffect(() => {
         if (state === 'idle') {
-            reset();
+            resetAll();
             return;
         }
 
@@ -66,85 +101,42 @@ export const ProactiveEngagementBox = () => {
                     while (true) {
                         if (stateRef.current === 'idle') break;
 
-                        // --- PHASE 1: BROWSING ---
-                        await waitForPlay();
-                        setPhase('browsing');
-                        reset();
-
-                        // Scroll Animation
-                        const scrollSteps = 40;
-                        for (let i = 0; i <= scrollSteps; i++) {
-                            await waitForPlay();
-                            const progress = i / scrollSteps;
-                            setScrollProgress(progress * 100);
-                            scrollControls.set({ y: -(progress * 300) }); // Scroll down 300px
-
-                            // Passive score increase
-                            setIntentScore(20 + (progress * 15));
-
-                            await wait(50);
-                        }
-
-                        // --- PHASE 2: SCORING ---
-                        await waitForPlay();
-                        setPhase('scoring');
-
-                        // Score Spike Animation
-                        const scoreTarget = 88;
-                        const scoreStart = 35;
-                        const jumpSteps = 20;
-
-                        for (let i = 0; i <= jumpSteps; i++) {
-                            await waitForPlay();
-                            const t = i / jumpSteps;
-                            // Ease out cubic
-                            const eased = 1 - Math.pow(1 - t, 3);
-                            setIntentScore(scoreStart + (scoreTarget - scoreStart) * eased);
-                            await wait(40);
-                        }
-
-                        await wait(800); // Hold on high score alert
-
-                        // --- PHASE 3: ENGAGEMENT ---
-                        await waitForPlay();
-                        setPhase('engagement');
-
-                        // Wait for widget entrance
-                        await wait(600);
-
-                        // Cursor Logic
-                        await cursorControls.start({ opacity: 1, x: 280, y: 400, transition: { duration: 0 } });
-                        await wait(200);
-
-                        // Move to "Yes" button (approximated coords)
-                        const moveSteps = 30;
-                        const startX = 280, startY = 400;
-                        const endX = 320, endY = 480;
-
-                        for (let i = 0; i <= moveSteps; i++) {
-                            await waitForPlay();
-                            const t = i / moveSteps;
-                            const smooth = t * t * (3 - 2 * t);
-                            cursorControls.set({
-                                x: startX + (endX - startX) * smooth,
-                                y: startY + (endY - startY) * smooth
-                            });
-                            await wait(20);
-                        }
-
-                        await wait(200);
-                        // "Click" visual pause
+                        // Reset
+                        resetAll();
                         await wait(300);
 
-                        // --- PHASE 4: HANDOFF ---
+                        // === PHASE 1: CALL_END ===
                         await waitForPlay();
-                        setPhase('handoff');
+                        setPhase('call_end');
+                        await wait(3000);
 
-                        await wait(500); // Wait for zoom out
-                        setShowHandoffCard(true);
+                        // === PHASE 2: PROCESSING ===
+                        await waitForPlay();
+                        setPhase('processing');
+                        setProcessingText("Analyzing transcript...");
+                        await wait(2000);
+                        await waitForPlay();
+                        setProcessingText("Extracting key topics...");
+                        await wait(2000);
 
-                        await wait(4000); // Show result
+                        // === PHASE 3: SUMMARY ===
+                        await waitForPlay();
+                        setPhase('summary');
+                        setVisibleSections(0);
+                        setShowDelivered(false);
+                        // Stagger sections in
+                        for (let i = 1; i <= 4; i++) {
+                            await waitForPlay();
+                            setVisibleSections(i);
+                            await wait(700);
+                        }
+                        await wait(1500);
 
+                        // === PHASE 4: DELIVERED ===
+                        await waitForPlay();
+                        setPhase('delivered');
+                        setShowDelivered(true);
+                        await wait(4000);
                     }
                 } catch (e) {
                     if (e instanceof Error && e.message !== "STOPPED") console.error(e);
@@ -154,260 +146,309 @@ export const ProactiveEngagementBox = () => {
             };
             loop();
         }
-    }, [state]); // Dependencies reduced to state to prevent restart on internal changes
+    }, [state]);
+
+    const isActive = state !== 'idle';
 
     return (
         <ClientOnly>
-            <div className="relative w-full h-[500px] bg-slate-950 flex flex-col overflow-hidden border border-slate-800 font-sans group select-none rounded-xl">
+            <div className="relative w-full h-full min-h-[400px] bg-slate-950 flex flex-col items-center justify-center overflow-hidden font-sans select-none">
 
                 <SimulationControls
                     state={state}
                     onPlay={() => setState('playing')}
                     onPause={() => setState('paused')}
                     onStop={() => setState('idle')}
+                    className="mt-4 mr-4"
                 />
 
-                {/* --- SCENE CONTAINER --- */}
-                <div className="relative w-full h-full overflow-hidden">
+                <AnimatePresence mode="wait">
 
-                    {/* Background Grid */}
-                    <div className="absolute inset-0 bg-[#0B1221]" />
-                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
-
-                    {/* --- MAIN BROWSER CONTENT (Scales down in Handoff) --- */}
-                    <motion.div
-                        className="w-full h-full origin-center"
-                        animate={{
-                            scale: phase === 'handoff' ? 0.8 : 1,
-                            opacity: phase === 'handoff' ? 0.3 : 1,
-                            filter: phase === 'handoff' ? "blur(4px)" : "blur(0px)"
-                        }}
-                        transition={{ duration: 0.8, ease: "easeInOut" }}
-                    >
-                        {/* Fake Browser Header */}
-                        <div className="h-10 bg-slate-900 border-b border-white/10 flex items-center px-4 gap-3 z-10 relative">
-                            <div className="flex gap-1.5 opacity-50">
-                                <div className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-                                <div className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-                                <div className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-                            </div>
-                            <div className="flex-1 max-w-md h-6 bg-slate-800 rounded flex items-center px-3 gap-2">
-                                <Globe size={12} className="text-slate-500" />
-                                <span className="text-[10px] text-slate-400 font-mono">zim.com/global-routes/enterprise</span>
-                            </div>
-                        </div>
-
-                        {/* Scrollable Content */}
-                        <div className="relative w-full h-full overflow-hidden bg-slate-900/50">
-                            <motion.div animate={scrollControls} className="p-8 space-y-8">
-                                {/* Hero Section */}
-                                <div className="w-full h-48 bg-gradient-to-br from-blue-900/20 to-cyan-900/20 rounded-lg border border-white/5 p-6 flex flex-col justify-end">
-                                    <div className="w-32 h-8 bg-blue-500/20 rounded mb-4" />
-                                    <div className="w-3/4 h-6 bg-slate-700/50 rounded mb-2" />
-                                    <div className="w-1/2 h-4 bg-slate-700/30 rounded" />
-                                </div>
-
-                                {/* Pricing Grid */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    {[1, 2].map(i => (
-                                        <div key={i} className="h-40 bg-slate-800/20 rounded border border-white/5 p-4 transform transition-all hover:scale-[1.02]">
-                                            <div className="w-8 h-8 rounded bg-cyan-500/10 mb-3" />
-                                            <div className="w-20 h-4 bg-slate-700/50 rounded mb-2" />
-                                            <div className="w-full h-2 bg-slate-700/20 rounded mb-1" />
-                                            <div className="w-2/3 h-2 bg-slate-700/20 rounded" />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Technical Specs */}
-                                <div className="space-y-3">
-                                    <div className="w-40 h-5 bg-slate-700/50 rounded" />
-                                    {[1, 2, 3].map(i => (
-                                        <div key={i} className="flex items-center gap-3 p-3 bg-slate-800/10 rounded border border-white/5">
-                                            <div className="w-4 h-4 rounded-full bg-green-500/20" />
-                                            <div className="flex-1 h-3 bg-slate-700/30 rounded" />
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Enterprise Footer */}
-                                <div className="h-32 bg-slate-800/30 rounded border border-white/5 p-6 flex items-center justify-center">
-                                    <div className="text-center space-y-2">
-                                        <div className="mx-auto w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                                            <Shield size={20} className="text-blue-400" />
-                                        </div>
-                                        <div className="w-32 h-4 bg-slate-700/50 rounded mx-auto" />
-                                    </div>
-                                </div>
-                            </motion.div>
-                        </div>
-                    </motion.div>
-
-                    {/* --- HUD OVERLAY --- */}
-                    {(phase === 'browsing' || phase === 'scoring' || phase === 'engagement') && (
+                    {/* === IDLE === */}
+                    {!isActive && (
                         <motion.div
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
+                            key="idle"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute top-14 right-4 w-64 backdrop-blur-xl bg-slate-900/90 border border-white/10 rounded-lg p-4 shadow-2xl z-20"
+                            className="flex flex-col items-center gap-4"
                         >
-                            <div className="flex items-center justify-between mb-4 pb-2 border-b border-white/5">
-                                <div className="flex items-center gap-2">
-                                    <Activity size={14} className="text-cyan-400" />
-                                    <span className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">Live Signal</span>
-                                </div>
-                                <div className="flex gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-cyan-500 animate-pulse" />
-                                    <div className="w-1 h-1 rounded-full bg-cyan-500 animate-pulse delay-75" />
-                                </div>
+                            <div className="w-20 h-20 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center">
+                                <FileText size={32} className="text-slate-500" />
                             </div>
-
-                            {/* Metrics */}
-                            <div className="grid grid-cols-2 gap-2 mb-4">
-                                <div className="bg-slate-800/50 p-2 rounded">
-                                    <div className="text-[9px] text-slate-500 uppercase font-bold">Scroll</div>
-                                    <div className="text-lg font-mono text-cyan-400">{Math.floor(scrollProgress)}%</div>
-                                </div>
-                                <div className="bg-slate-800/50 p-2 rounded">
-                                    <div className="text-[9px] text-slate-500 uppercase font-bold">Intent</div>
-                                    <div className={`text-lg font-mono transition-colors duration-300 ${intentScore > 60 ? 'text-orange-400' : 'text-slate-300'}`}>
-                                        {Math.floor(intentScore)}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Intent Gauge */}
-                            <div className="space-y-1">
-                                <div className="flex justify-between text-[10px] font-semibold text-slate-400">
-                                    <span>SCORING MODEL</span>
-                                    <span>v2.4</span>
-                                </div>
-                                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                                    <motion.div
-                                        className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-orange-500"
-                                        style={{ width: `${intentScore}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Alert Logic */}
-                            <AnimatePresence>
-                                {intentScore > 80 && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                                        animate={{ height: "auto", opacity: 1, marginTop: 12 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="overflow-hidden"
-                                    >
-                                        <div className="bg-orange-500/10 border border-orange-500/20 rounded p-2 flex items-start gap-2">
-                                            <AlertCircle size={14} className="text-orange-500 mt-0.5 shrink-0" />
-                                            <div>
-                                                <div className="text-[10px] font-bold text-orange-400 uppercase">High Value Intent</div>
-                                                <div className="text-[9px] text-orange-400/70 leading-tight">Prospect qualifies for instant enterprise engagement.</div>
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            <p className="text-slate-500 text-sm font-medium uppercase tracking-widest">Post-Call AI Ready</p>
                         </motion.div>
                     )}
 
-                    {/* --- CHAT WIDGET --- */}
-                    <AnimatePresence>
-                        {phase === 'engagement' && (
-                            <motion.div
-                                initial={{ y: 200, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                exit={{ y: 200, opacity: 0 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                className="absolute bottom-6 right-6 w-[320px] bg-white rounded-lg shadow-2xl overflow-hidden z-30"
+                    {/* === CALL_END BANNER === */}
+                    {isActive && phase === 'call_end' && (
+                        <motion.div
+                            key="call_end"
+                            initial={{ opacity: 0, y: -30 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                            className="w-full max-w-md px-4"
+                        >
+                            <div className="bg-slate-900 border border-slate-700 rounded-xl p-4 flex flex-col gap-3 shadow-[0_0_30px_rgba(239,68,68,0.08)]">
+                                {/* Call ended header */}
+                                <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center">
+                                        <PhoneOff size={14} className="text-red-400" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-white font-bold text-sm">Call Ended</p>
+                                        <p className="text-slate-500 text-[10px] font-mono">12:34 duration</p>
+                                    </div>
+                                    <motion.div
+                                        animate={{ opacity: [0.5, 1, 0.5] }}
+                                        transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
+                                        className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/25"
+                                    >
+                                        <span className="text-[9px] font-bold text-amber-400 uppercase tracking-widest">Processing</span>
+                                    </motion.div>
+                                </div>
+
+                                {/* Participants */}
+                                <div className="flex items-center gap-3 px-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-blue-500/15 border border-blue-500/30 flex items-center justify-center">
+                                            <span className="text-[9px] font-bold text-blue-400">DK</span>
+                                        </div>
+                                        <span className="text-xs text-slate-300 font-medium">David K.</span>
+                                    </div>
+                                    <span className="text-slate-600 text-xs">↔</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center justify-center">
+                                            <span className="text-[8px] font-bold text-purple-400 tracking-tighter">ZIM</span>
+                                        </div>
+                                        <span className="text-xs text-slate-300 font-medium">ZIM</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* === PROCESSING (WAVEFORM + SCANLINE) === */}
+                    {isActive && phase === 'processing' && (
+                        <motion.div
+                            key="processing"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="flex flex-col items-center gap-6 w-full max-w-sm px-4"
+                        >
+                            {/* Waveform container */}
+                            <div className="relative w-full h-16 flex items-center justify-center gap-[3px] overflow-hidden rounded-lg bg-slate-900/80 border border-slate-800 px-3">
+                                {/* Waveform bars */}
+                                {Array.from({ length: 32 }).map((_, i) => (
+                                    <motion.div
+                                        key={i}
+                                        animate={{
+                                            height: state === 'playing'
+                                                ? [4 + Math.random() * 6, 10 + Math.random() * 30, 4 + Math.random() * 6]
+                                                : 8,
+                                        }}
+                                        transition={{
+                                            repeat: Infinity,
+                                            duration: 0.4 + Math.random() * 0.6,
+                                            ease: "easeInOut",
+                                            delay: i * 0.03,
+                                        }}
+                                        className="w-[3px] rounded-full bg-cyan-500/40 shrink-0"
+                                    />
+                                ))}
+
+                                {/* Scanline overlay */}
+                                <motion.div
+                                    className="absolute top-0 bottom-0 w-[2px] bg-cyan-400 shadow-[0_0_12px_4px_rgba(34,211,238,0.4)]"
+                                    style={{ left: `${scanlineProgress * 100}%` }}
+                                />
+
+                                {/* Processed region tint */}
+                                <div
+                                    className="absolute top-0 bottom-0 left-0 bg-cyan-400/5 pointer-events-none transition-none"
+                                    style={{ width: `${scanlineProgress * 100}%` }}
+                                />
+                            </div>
+
+                            {/* Processing text */}
+                            <motion.p
+                                key={processingText}
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="text-cyan-400 font-mono text-xs uppercase tracking-widest"
                             >
-                                <div className="bg-[#1D2536] p-4 flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center shadow-lg">
-                                        <MessageCircle size={16} className="text-white fill-white/20" />
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-bold text-white">Sales Assistant</div>
-                                        <div className="text-[10px] text-cyan-400 flex items-center gap-1">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                                            Active Now
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="p-4 bg-slate-50 space-y-3">
-                                    <div className="bg-white border border-slate-200 p-3 rounded-lg rounded-tl-none shadow-sm text-sm text-slate-800">
-                                        Hello! I noticed you're looking at our global routes. Would you like a custom quote for your enterprise?
-                                    </div>
-                                    <div className="flex gap-2 pt-1">
-                                        <button className="flex-1 bg-[#FF4D00] hover:bg-[#E04400] text-white text-xs font-bold py-2.5 rounded shadow-lg shadow-orange-500/20 active:scale-95 transition-all">
-                                            Yes, get quote
-                                        </button>
-                                        <button className="px-3 py-2.5 text-slate-500 hover:bg-slate-100 rounded text-xs font-bold transition-colors">
-                                            No thanks
-                                        </button>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                                {processingText}
+                            </motion.p>
+                        </motion.div>
+                    )}
 
-                    {/* --- CURSOR --- */}
-                    <motion.div
-                        animate={cursorControls}
-                        initial={{ opacity: 0, x: 0, y: 0 }}
-                        className="absolute z-50 pointer-events-none drop-shadow-xl"
-                    >
-                        <MousePointer2 size={24} className="text-slate-900 fill-white" />
-                    </motion.div>
-
-                    {/* --- HANDOFF CARD --- */}
-                    <AnimatePresence>
-                        {showHandoffCard && (
-                            <motion.div
-                                initial={{ y: -50, opacity: 0, scale: 0.9 }}
-                                animate={{ y: 0, opacity: 1, scale: 1 }}
-                                transition={{ type: "spring", bounce: 0.4 }}
-                                className="absolute inset-0 flex items-center justify-center z-40 bg-slate-950/20 backdrop-blur-[2px]"
+                    {/* === SUMMARY CARD (+ DELIVERED footer) === */}
+                    {isActive && (phase === 'summary' || phase === 'delivered') && (
+                        <motion.div
+                            key="summary"
+                            initial={{ opacity: 0, y: 60, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                            className="w-full max-w-sm mx-auto px-4"
+                        >
+                            <div
+                                className="rounded-xl overflow-hidden border"
+                                style={{
+                                    background: 'rgba(15, 23, 42, 0.9)',
+                                    borderColor: showDelivered ? 'rgba(52, 211, 153, 0.4)' : 'rgba(100, 116, 139, 0.3)',
+                                    boxShadow: showDelivered
+                                        ? '0 0 40px rgba(52, 211, 153, 0.12)'
+                                        : '0 0 30px rgba(0,0,0,0.3)',
+                                }}
                             >
-                                <div className="w-[300px] bg-[#0F172A] border border-cyan-500/30 rounded-xl shadow-2xl overflow-hidden">
-                                    <div className="h-1 bg-gradient-to-r from-cyan-500 to-blue-600" />
-                                    <div className="p-5">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div>
-                                                <div className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider mb-1">Incoming Lead</div>
-                                                <h3 className="text-lg font-bold text-white">Adidas Global</h3>
-                                            </div>
-                                            <div className="w-8 h-8 rounded bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20">
-                                                <Zap size={16} className="text-cyan-400" />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3 mb-5">
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-slate-400">Intent Score</span>
-                                                <span className="font-mono font-bold text-orange-400">94/100</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-slate-400">Deal Value</span>
-                                                <span className="font-mono font-bold text-white">$1.2M</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-slate-400">Source</span>
-                                                <span className="text-slate-300">Enterprise Pricing</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-2 p-2 bg-green-500/10 border border-green-500/20 rounded">
-                                            <CheckCircle2 size={14} className="text-green-400" />
-                                            <span className="text-[10px] font-bold text-green-400 uppercase">Routed to Enterprise Team</span>
-                                        </div>
+                                {/* Card Header */}
+                                <div className="px-4 py-3 flex items-center justify-between border-b border-slate-800">
+                                    <div className="flex items-center gap-2">
+                                        <FileText size={14} className="text-cyan-400" />
+                                        <span className="text-white font-bold text-sm">AI Summary</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-[9px] text-slate-500 font-mono">David K. ↔ ZIM</span>
                                     </div>
                                 </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
 
-                </div>
+                                {/* Card Body — staggered sections */}
+                                <div className="px-4 py-3 space-y-3">
+
+                                    {/* Section 1: Topics Discussed */}
+                                    <AnimatePresence>
+                                        {visibleSections >= 1 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 12 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.35 }}
+                                            >
+                                                <div className="flex items-center gap-1.5 mb-1.5">
+                                                    <FileText size={11} className="text-slate-500" />
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Topics Discussed</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {TOPICS.map((topic, i) => (
+                                                        <motion.span
+                                                            key={topic}
+                                                            initial={{ opacity: 0, scale: 0.8 }}
+                                                            animate={{ opacity: 1, scale: 1 }}
+                                                            transition={{ delay: i * 0.1 }}
+                                                            className="px-2 py-1 rounded-md bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[10px] font-medium"
+                                                        >
+                                                            {topic}
+                                                        </motion.span>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    {/* Section 2: Action Items */}
+                                    <AnimatePresence>
+                                        {visibleSections >= 2 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 12 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.35 }}
+                                            >
+                                                <div className="flex items-center gap-1.5 mb-1.5 pt-2 border-t border-slate-800/60">
+                                                    <CheckSquare size={11} className="text-slate-500" />
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Action Items</span>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    {ACTION_ITEMS.map((item, i) => (
+                                                        <motion.div
+                                                            key={item}
+                                                            initial={{ opacity: 0, x: -10 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            transition={{ delay: i * 0.12 }}
+                                                            className="flex items-start gap-2"
+                                                        >
+                                                            <div className="w-3.5 h-3.5 rounded border border-amber-500/40 bg-amber-500/10 mt-0.5 shrink-0 flex items-center justify-center">
+                                                                <div className="w-1.5 h-1.5 rounded-sm bg-transparent" />
+                                                            </div>
+                                                            <span className="text-[11px] text-slate-300 leading-relaxed">{item}</span>
+                                                        </motion.div>
+                                                    ))}
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    {/* Section 3: Customer Mood */}
+                                    <AnimatePresence>
+                                        {visibleSections >= 3 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 12 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.35 }}
+                                            >
+                                                <div className="flex items-center gap-1.5 mb-1.5 pt-2 border-t border-slate-800/60">
+                                                    <Smile size={11} className="text-slate-500" />
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Customer Mood</span>
+                                                </div>
+                                                <motion.div
+                                                    initial={{ scale: 0.8 }}
+                                                    animate={{ scale: 1 }}
+                                                    transition={{ type: "spring", stiffness: 500, damping: 20 }}
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30"
+                                                >
+                                                    <Smile size={12} className="text-emerald-400" />
+                                                    <span className="text-[11px] font-bold text-emerald-300">Positive</span>
+                                                </motion.div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+
+                                    {/* Section 4: Next Steps */}
+                                    <AnimatePresence>
+                                        {visibleSections >= 4 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 12 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.35 }}
+                                            >
+                                                <div className="flex items-center gap-1.5 mb-1.5 pt-2 border-t border-slate-800/60">
+                                                    <Calendar size={11} className="text-slate-500" />
+                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Next Steps</span>
+                                                </div>
+                                                <p className="text-[11px] text-slate-300 leading-relaxed">{NEXT_STEPS}</p>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                {/* DELIVERED Footer */}
+                                <AnimatePresence>
+                                    {showDelivered && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: "auto", opacity: 1 }}
+                                            transition={{ duration: 0.4, ease: "easeOut" }}
+                                            className="border-t border-emerald-500/20 px-4 py-2.5 flex items-center gap-2 bg-emerald-500/5 overflow-hidden"
+                                        >
+                                            <motion.div
+                                                initial={{ scale: 0 }}
+                                                animate={{ scale: 1 }}
+                                                transition={{ type: "spring", stiffness: 500, damping: 15, delay: 0.15 }}
+                                                className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0"
+                                            >
+                                                <CheckSquare size={10} className="text-emerald-400" />
+                                            </motion.div>
+                                            <span className="text-[10px] font-semibold text-emerald-300/90">
+                                                Summary sent to David K. & logged to Dynamics 365
+                                            </span>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        </motion.div>
+                    )}
+
+                </AnimatePresence>
             </div>
         </ClientOnly>
     );

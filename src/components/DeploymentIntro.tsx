@@ -9,10 +9,14 @@ interface DeploymentIntroProps {
 }
 
 const features = [
-    { label: "Speech & Text Analytics", color: "from-blue-400 to-indigo-500" },
-    { label: "AI Summarization", color: "from-emerald-400 to-teal-500" },
-    { label: "AI Scoring", color: "from-purple-400 to-fuchsia-500" },
-    { label: "AI Translation", color: "from-orange-400 to-amber-500" },
+    { label: "Sales Meeting AI Summary", color: "from-green-400 to-emerald-500" },
+    { label: "Transcript Translation Hub", color: "from-indigo-400 to-blue-500" },
+    { label: "Call Recording Intelligence", color: "from-purple-400 to-violet-500" },
+    { label: "Speech & Text Analytics", color: "from-amber-400 to-yellow-500" },
+    { label: "Supervisor Performance Dashboard", color: "from-pink-400 to-rose-500" },
+    { label: "AI Post-Call Summary", color: "from-cyan-400 to-blue-500" },
+    { label: "Sales Direct Genesys Lines", color: "from-blue-400 to-sky-500" },
+    { label: "Automated Sales Evaluation", color: "from-yellow-400 to-orange-500" },
 ];
 
 export const DeploymentIntro = ({ onReached }: DeploymentIntroProps) => {
@@ -31,10 +35,7 @@ export const DeploymentIntro = ({ onReached }: DeploymentIntroProps) => {
             {/* Title Block */}
             <div className="mb-8">
                 <AnimatedTitle as="h2" className="text-4xl md:text-6xl lg:text-7xl mb-2 tracking-tight">
-                    Genesys AI
-                </AnimatedTitle>
-                <AnimatedTitle as="h2" className="text-4xl md:text-6xl lg:text-7xl text-slate-300 tracking-tight" delay={0.1}>
-                    2025 Deployments
+                    Genesys AI for Sales
                 </AnimatedTitle>
             </div>
 
@@ -46,7 +47,7 @@ export const DeploymentIntro = ({ onReached }: DeploymentIntroProps) => {
                 transition={{ duration: 0.6, delay: 0.2 }}
                 className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-12"
             >
-                AI capabilities already transforming ZIM's customer operations
+                Accelerate revenue with native AI that unifies voice, digital, and CRM workflows for the modern sales team.
             </motion.p>
 
             {/* Holographic Feature Modules */}

@@ -120,7 +120,8 @@
 
 .card-stream-wrapper .card-normal {
     background: transparent;
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    /* Box shadow removed for cleaner floating container look */
+    filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.5));
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -128,7 +129,7 @@
     color: white;
     z-index: 2;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     clip-path: inset(0 0 0 var(--clip-right, 0%));
 }
 
@@ -136,28 +137,53 @@
     /* Ensure card image stays clean */
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     border-radius: 15px;
     transition: all 0.3s ease;
     filter: brightness(1.1) contrast(1.1);
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }
 
 .card-stream-wrapper .card-image:hover {
     filter: brightness(1.2) contrast(1.2);
 }
 
-.card-stream-wrapper .card-ascii {
+.card-stream-wrapper .card-scanned {
     background: transparent;
-    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
     position: absolute;
     top: 0;
     left: 0;
-    width: 400px;
-    height: 250px;
-    border-radius: 15px;
-    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    /* Ensure it overlaps exactly */
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.1s;
+    /* Progressive reveal from left to right using CSS var set by JS */
     clip-path: inset(0 calc(100% - var(--clip-left, 0%)) 0 0);
+    /* Neon glow effect for money */
+    filter: drop-shadow(0 0 10px rgba(0, 255, 100, 0.6)) drop-shadow(0 0 20px rgba(0, 200, 100, 0.4));
+}
+
+.card-stream-wrapper .card-wrapper[data-scanned="true"] .card-scanned {
+    opacity: 1;
+}
+
+.card-stream-wrapper .money-texture {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('/money-texture.png');
+    background-size: 300px;
+    background-repeat: repeat;
+    filter: brightness(1.3) contrast(1.3) saturate(1.4) hue-rotate(-5deg);
+    box-shadow: inset 0 0 50px rgba(0, 255, 0, 0.2);
 }
 
 .card-stream-wrapper .ascii-content {
@@ -166,32 +192,19 @@
     left: 0;
     width: 100%;
     height: 100%;
-    color: rgba(220, 210, 255, 0.6);
+    color: rgba(255, 255, 255, 0.95);
     font-family: "Courier New", monospace;
     font-size: 11px;
     line-height: 13px;
+    white-space: pre-wrap;
     overflow: hidden;
-    white-space: pre;
-    clip-path: inset(0 calc(100% - var(--clip-left, 0%)) 0 0);
-    animation: glitch 0.1s infinite linear alternate-reverse;
-    margin: 0;
-    padding: 0;
-    text-align: left;
-    vertical-align: top;
-    box-sizing: border-box;
-    -webkit-mask-image: linear-gradient(to right,
-            rgba(0, 0, 0, 1) 0%,
-            rgba(0, 0, 0, 0.8) 30%,
-            rgba(0, 0, 0, 0.6) 50%,
-            rgba(0, 0, 0, 0.4) 80%,
-            rgba(0, 0, 0, 0.2) 100%);
-    mask-image: linear-gradient(to right,
-            rgba(0, 0, 0, 1) 0%,
-            rgba(0, 0, 0, 0.8) 30%,
-            rgba(0, 0, 0, 0.6) 50%,
-            rgba(0, 0, 0, 0.4) 80%,
-            rgba(0, 0, 0, 0.2) 100%);
+    font-weight: bold;
+    text-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    mix-blend-mode: hard-light;
 }
+
+
 
 @keyframes glitch {
     0% {
@@ -235,11 +248,11 @@
     border-radius: 30px;
     background: linear-gradient(to bottom,
             transparent,
-            rgba(0, 255, 255, 0.8),
-            rgba(0, 255, 255, 1),
-            rgba(0, 255, 255, 0.8),
+            rgba(220, 38, 38, 0.8),
+            rgba(239, 68, 68, 1),
+            rgba(220, 38, 38, 0.8),
             transparent);
-    box-shadow: 0 0 20px rgba(0, 255, 255, 0.8), 0 0 40px rgba(0, 255, 255, 0.4);
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.8), 0 0 40px rgba(220, 38, 38, 0.4);
     animation: scanPulse 2s ease-in-out infinite alternate;
     z-index: 10;
 }
@@ -264,7 +277,7 @@
     height: 100%;
     background: linear-gradient(90deg,
             transparent,
-            rgba(0, 255, 255, 0.4),
+            rgba(220, 38, 38, 0.4),
             transparent);
     animation: scanEffect 0.6s ease-out;
     pointer-events: none;
@@ -285,17 +298,6 @@
         transform: translateX(100%);
         opacity: 0;
     }
-}
-
-.card-stream-wrapper #particleCanvas {
-    position: absolute;
-    top: 50%;
-    left: 0;
-    transform: translateY(-50%);
-    width: 100vw;
-    height: 250px;
-    z-index: 0;
-    pointer-events: none;
 }
 
 .card-stream-wrapper #scannerCanvas {

@@ -1,378 +1,340 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import { SimulationControls, SimulationState } from './SimulationControls';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Mail, Zap, CheckCircle2, AlertTriangle, TrendingDown, Users, FileText, Send, RefreshCw, Play, Pause } from 'lucide-react';
 import { ClientOnly } from './ClientOnly';
-
-// --- Types ---
-type SimulationPhase = 'IDLE' | 'RADAR_SCAN' | 'DEEP_DIVE' | 'STRATEGY' | 'EXECUTION' | 'RESOLVED';
-
-interface Client {
-    id: string;
-    name: string;
-    logo: React.ReactNode;
-    status: 'stable' | 'risk' | 'churned' | 'retained';
-}
-
-const CLIENTS: Client[] = [
-    { id: 'c1', name: 'Adidas', logo: <span className="font-black text-xl">A</span>, status: 'stable' },
-    { id: 'c2', name: 'Nike', logo: <span className="font-black text-xl italic">N</span>, status: 'stable' },
-    { id: 'c3', name: 'Tesla', logo: <span className="font-bold text-xl tracking-tighter">T</span>, status: 'risk' },
-    { id: 'c4', name: 'Sony', logo: <span className="font-serif text-xl">S</span>, status: 'stable' },
-    { id: 'c5', name: 'Uber', logo: <span className="font-medium text-xl">U</span>, status: 'stable' },
-    { id: 'c6', name: 'Meta', logo: <span className="font-bold text-xl">∞</span>, status: 'stable' },
-    { id: 'c7', name: 'Apple', logo: <span className="font-bold text-xl"></span>, status: 'stable' },
-];
-
-// --- Sub-components ---
-
-const HexGrid = ({ clients, scanActive, onTargetFound }: { clients: Client[], scanActive: boolean, onTargetFound: () => void }) => {
-    return (
-        <div className="grid grid-cols-3 gap-4 md:gap-6 relative z-10 p-4">
-            {clients.map((client, index) => (
-                <ClientHex key={client.id} client={client} index={index} scanActive={scanActive} onTargetFound={onTargetFound} />
-            ))}
-            {/* Radar Scan Overlay */}
-            <AnimatePresence>
-                {scanActive && (
-                    <motion.div
-                        className="absolute inset-0 z-20 pointer-events-none overflow-hidden rounded-xl"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                    >
-                        <motion.div
-                            className="w-full h-[20%] bg-gradient-to-b from-transparent via-cyan-500/30 to-transparent blur-sm absolute top-0"
-                            animate={{ top: ['-20%', '120%'] }}
-                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                        />
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_30%,rgba(6,182,212,0.1)_70%)] opacity-50" />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </div>
-    );
-};
-
-const ClientHex = ({ client, index, scanActive, onTargetFound }: { client: Client, index: number, scanActive: boolean, onTargetFound: () => void }) => {
-    const isTarget = client.name === 'Tesla';
-    const [isFlickering, setIsFlickering] = useState(false);
-
-    useEffect(() => {
-        if (scanActive && isTarget) {
-            const timer = setTimeout(() => {
-                setIsFlickering(true);
-                onTargetFound();
-            }, 1500); // Found after 1.5s of scanning
-            return () => clearTimeout(timer);
-        } else {
-            setIsFlickering(false);
-        }
-    }, [scanActive, isTarget, onTargetFound]);
-
-    return (
-        <motion.div
-            layout
-            className={`relative aspect-video md:aspect-square flex flex-col items-center justify-center rounded-xl border backdrop-blur-sm transition-all duration-300
-                ${isFlickering
-                    ? 'bg-red-900/40 border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]'
-                    : 'bg-slate-800/40 border-slate-700/50 hover:bg-slate-700/40'
-                }
-            `}
-        >
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center border mb-2
-                 ${isFlickering ? 'bg-red-500/20 text-red-200 border-red-500/50' : 'bg-slate-700/50 text-slate-300 border-slate-600/50'}
-            `}>
-                {client.logo}
-            </div>
-            <div className={`text-xs font-bold uppercase tracking-wider ${isFlickering ? 'text-red-400' : 'text-slate-400'}`}>
-                {client.name}
-            </div>
-            {isFlickering && (
-                <motion.div
-                    layoutId="risk-badge"
-                    className="absolute -top-2 -right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                >
-                    <AlertTriangle size={10} /> RISK
-                </motion.div>
-            )}
-        </motion.div>
-    );
-};
-
-const DeepDiveCard = ({ onActionClick }: { onActionClick: () => void }) => {
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="w-full h-full flex flex-col gap-4"
-        >
-            {/* Header */}
-            <div className="flex justify-between items-start">
-                <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 bg-red-500/20 rounded-xl flex items-center justify-center border border-red-500/50 text-red-400 font-bold text-2xl tracking-tighter">
-                        T
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold text-white leading-none">Tesla Motors</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="text-xs text-red-400 bg-red-950/50 px-2 py-0.5 rounded border border-red-900/50">High Risk</span>
-                            <span className="text-xs text-slate-400">ARR: $4.5M</span>
-                        </div>
-                    </div>
-                </div>
-                <div className="text-right">
-                    <div className="text-2xl font-black text-red-500">-28</div>
-                    <div className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">NPS Score</div>
-                </div>
-            </div>
-
-            {/* Health Grid */}
-            <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                    <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-                        <TrendingDown size={14} /> Usage
-                    </div>
-                    <div className="text-white font-mono font-bold">-15% MoM</div>
-                </div>
-                <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700/50">
-                    <div className="flex items-center gap-2 text-slate-400 text-xs mb-1">
-                        <Users size={14} /> Active Seats
-                    </div>
-                    <div className="text-white font-mono font-bold">142/200</div>
-                </div>
-            </div>
-
-            {/* AI Insight */}
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mx-1">
-                <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider mb-2">
-                    <Zap size={14} /> AI Root Cause
-                </div>
-                <p className="text-sm text-amber-200/80 leading-snug">
-                    Recent surge in "API Latency" tickets correlates with drop in usage.
-                </p>
-            </div>
-
-            <div className="flex-1" />
-
-            {/* Action Button */}
-            <motion.button
-                whileHover={{ scale: 1.02, backgroundColor: 'rgba(59, 130, 246, 1)' }}
-                whileTap={{ scale: 0.98 }}
-                onClick={onActionClick}
-                className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 relative overflow-hidden group"
-            >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                <Mail size={16} />
-                Generate Retention Email
-            </motion.button>
-        </motion.div>
-    );
-};
-
-const ExecutionView = ({ isPlaying, onComplete }: { isPlaying: boolean, onComplete: () => void }) => {
-    const fullText = "Team, I've noticed the latency issues. I'm deploying a dedicated instance for you immediately and issuing a 20% service credit for Q3.";
-    const [text, setText] = useState("");
-    const index = useRef(0);
-    const [sent, setSent] = useState(false);
-
-    useEffect(() => {
-        let timer: NodeJS.Timeout;
-        if (isPlaying && !sent) {
-            timer = setInterval(() => {
-                if (index.current < fullText.length) {
-                    setText((prev) => prev + fullText.charAt(index.current));
-                    index.current++;
-                } else {
-                    clearInterval(timer);
-                    setTimeout(() => setSent(true), 800);
-                    setTimeout(onComplete, 2500); // Wait before finishing
-                }
-            }, 30);
-        }
-        return () => clearInterval(timer);
-    }, [isPlaying, sent, onComplete]);
-
-    if (sent) {
-        return (
-            <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="flex flex-col items-center justify-center h-full text-center"
-            >
-                <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center text-emerald-400 mb-4 border border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
-                    <Send size={32} />
-                </div>
-                <h3 className="text-emerald-400 font-bold text-lg mb-1">Email Sent</h3>
-                <p className="text-slate-400 text-sm">Status updated to <span className="text-emerald-400 font-semibold">Risk Mitigated</span></p>
-            </motion.div>
-        );
-    }
-
-    return (
-        <div className="bg-slate-900 rounded-lg p-4 border border-slate-700 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
-                <div className="flex items-center gap-2 text-sm text-slate-300">
-                    <div className="w-6 h-6 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 text-xs">AI</div>
-                    <span className="font-semibold">Drafting Response...</span>
-                </div>
-            </div>
-            <div className="font-mono text-sm text-slate-300 leading-relaxed">
-                {text}
-                <span className="animate-pulse ml-1 inline-block w-2 h-4 bg-blue-500 align-middle"></span>
-            </div>
-        </div>
-    );
-};
-
+import { Search, Play, Pause, BarChart2, MessageSquare, Tag, User, Clock, MoreVertical, MousePointer2 } from 'lucide-react';
 
 export const PredictiveRoutingBox = () => {
-    const [phase, setPhase] = useState<SimulationPhase>('IDLE');
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [key, setKey] = useState(0); // For resetting
+    const [state, setState] = useState<SimulationState>('idle');
+    const [simStep, setSimStep] = useState<'IDLE' | 'LIBRARY' | 'SEARCH' | 'PLAYBACK' | 'JUMP'>('IDLE');
+    const [searchText, setSearchText] = useState("");
+    const [waveformProgress, setWaveformProgress] = useState(0);
 
-    const handlePlay = () => {
-        setIsPlaying(true);
-        if (phase === 'IDLE') setPhase('RADAR_SCAN');
+    // --- Data ---
+    const CALLS = [
+        { id: 1, rep: "Sarah J.", client: "Maersk Logistics", duration: "12:05", tags: [{ text: "Price Discussion", color: "bg-orange-500" }, { text: "Urgent", color: "bg-red-500" }] },
+        { id: 2, rep: "Mike T.", client: "DHL Global", duration: "08:30", tags: [{ text: "Competitor Mention", color: "bg-purple-500" }] },
+        { id: 3, rep: "David L.", client: "Kuehne+Nagel", duration: "15:45", tags: [{ text: "Contract Renewal", color: "bg-emerald-500" }] },
+        { id: 4, rep: "Emma W.", client: "MSC Shipping", duration: "05:12", tags: [{ text: "General Inquiry", color: "bg-blue-500" }] },
+    ];
+
+    const TRANSCRIPT = [
+        { time: "2:15", speaker: "Client", text: "Maersk quoted us lower for this route.", color: "text-red-400", marker: "🔴" },
+        { time: "3:42", speaker: "Client", text: "Can you match that rate?", color: "text-amber-400", marker: "🟡" },
+        { time: "5:10", speaker: "Rep", text: "Your transit time is the differentiator here.", color: "text-emerald-400", marker: "🟢" },
+    ];
+
+    // --- Refs ---
+    const stateRef = useRef(state);
+    stateRef.current = state;
+    const isLoopingRef = useRef(false);
+
+    // --- Helpers ---
+    const wait = async (ms: number) => {
+        let passed = 0;
+        while (passed < ms) {
+            if (stateRef.current === 'idle') throw new Error("STOPPED");
+            if (stateRef.current === 'playing') passed += 50;
+            await new Promise(r => setTimeout(r, 50));
+        }
     };
 
-    const handlePause = () => setIsPlaying(false);
-
-    const handleReset = () => {
-        setIsPlaying(false);
-        setPhase('IDLE');
-        setKey(prev => prev + 1);
+    const waitForPlay = async () => {
+        while (stateRef.current !== 'playing') {
+            if (stateRef.current === 'idle') throw new Error("STOPPED");
+            await new Promise(r => setTimeout(r, 100));
+        }
     };
 
-    const handleTargetFound = () => {
-        setTimeout(() => {
-            if (isPlaying) setPhase('DEEP_DIVE');
-        }, 1000);
+    const typeText = async (text: string, setter: (s: string) => void) => {
+        for (let i = 0; i <= text.length; i++) {
+            await waitForPlay();
+            setter(text.slice(0, i));
+            await wait(50 + Math.random() * 50);
+        }
     };
 
-    const handleStrategyClick = () => {
-        setPhase('EXECUTION');
-    };
+    // --- Simulation Loop ---
+    useEffect(() => {
+        if (state === 'idle') {
+            setSimStep('IDLE');
+            setSearchText("");
+            setWaveformProgress(0);
+            return;
+        }
 
-    const handleExecutionComplete = () => {
-        setPhase('RESOLVED');
-        // Auto-reset after delay
-        setTimeout(() => {
-            if (phase !== 'IDLE') handleReset();
-        }, 3000);
-    };
+        if (state === 'playing' && !isLoopingRef.current) {
+            isLoopingRef.current = true;
 
+            const loop = async () => {
+                try {
+                    while (true) {
+                        if (stateRef.current === 'idle') break;
+
+                        // Reset
+                        setSimStep('LIBRARY');
+                        setSearchText("");
+                        setWaveformProgress(0);
+                        await wait(2000);
+
+                        // Search
+                        setSimStep('SEARCH');
+                        await wait(500);
+                        await typeText("price objection", setSearchText);
+                        await wait(1000);
+
+                        // Select & Playback
+                        setSimStep('PLAYBACK');
+                        await wait(1000);
+
+                        // Simulate Audio Playing
+                        const startTime = Date.now();
+                        const duration = 4000; // 4s playback simulation
+                        while (Date.now() - startTime < duration) {
+                            await waitForPlay();
+                            setWaveformProgress(((Date.now() - startTime) / duration) * 40); // Play up to 40%
+                            await new Promise(r => requestAnimationFrame(r));
+                        }
+
+                        // Jump
+                        setSimStep('JUMP');
+                        await wait(1000); // Hover effect time
+                        setWaveformProgress(75); // Jump to 75%
+                        await wait(500);
+
+                        // Continue Playback after jump
+                        const jumpTime = Date.now();
+                        const jumpDuration = 3000;
+                        while (Date.now() - jumpTime < jumpDuration) {
+                            await waitForPlay();
+                            setWaveformProgress(75 + ((Date.now() - jumpTime) / jumpDuration) * 25);
+                            await new Promise(r => requestAnimationFrame(r));
+                        }
+
+                        await wait(2000);
+                    }
+                } catch (e) {
+                    if (e instanceof Error && e.message !== "STOPPED") console.error(e);
+                } finally {
+                    isLoopingRef.current = false;
+                }
+            };
+            loop();
+        }
+    }, [state]);
+
+
+    // --- Render Logic ---
+    const filteredCalls = searchText
+        ? CALLS.filter(c => c.id === 1) // Force match for simulation
+        : CALLS;
 
     return (
         <ClientOnly>
-            <div className="relative w-full h-[400px] bg-slate-950 flex flex-col overflow-hidden border border-slate-800/50 rounded-none md:rounded-b-2xl">
+            <div className="relative w-full h-full min-h-[520px] bg-slate-950 flex flex-col overflow-hidden font-sans select-none border border-slate-800 rounded-xl">
 
-                {/* --- HEADER / CONTROL BAR --- */}
-                <div className="absolute top-0 inset-x-0 h-14 bg-slate-900/60 backdrop-blur-md border-b border-white/5 z-50 flex items-center justify-between px-4">
-                    <div className="flex items-center gap-2">
-                        <Shield className="text-cyan-400" size={16} />
-                        <span className="text-xs font-bold text-slate-300 tracking-wider">CHURN SENTINEL</span>
+                {/* Header Status */}
+                <div className="absolute top-0 inset-x-0 h-16 bg-slate-900/90 backdrop-blur border-b border-white/5 flex items-center justify-between px-4 z-40">
+                    <div className="flex items-center gap-3 text-slate-300">
+                        <BarChart2 size={18} className="text-purple-400" />
+                        <span className="text-xs font-bold uppercase tracking-wide hidden sm:inline-block">Recording Intelligence</span>
                     </div>
-                    <div className="flex items-center gap-1 bg-slate-800/80 rounded-lg p-1 border border-white/5">
-                        <button
-                            onClick={handleReset}
-                            className="p-1.5 rounded-md hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
-                            title="Reset"
-                        >
-                            <RefreshCw size={14} />
-                        </button>
-                        <div className="w-px h-4 bg-white/10 mx-0.5" />
-                        {isPlaying && phase !== 'RESOLVED' ? (
-                            <button
-                                onClick={handlePause}
-                                className="p-1.5 rounded-md hover:bg-white/10 text-amber-400 transition-colors"
-                                title="Pause"
-                            >
-                                <Pause size={14} fill="currentColor" />
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handlePlay}
-                                disabled={phase === 'RESOLVED'}
-                                className={`p-1.5 rounded-md hover:bg-white/10 transition-colors ${phase === 'RESOLVED' ? 'text-slate-600' : 'text-emerald-400'}`}
-                                title="Play"
-                            >
-                                <Play size={14} fill="currentColor" />
-                            </button>
-                        )}
+
+                    <div className="flex items-center gap-3">
+                        {/* Search Bar */}
+                        <div className={simStep === 'SEARCH' || simStep === 'PLAYBACK' || simStep === 'JUMP'
+                            ? "flex items-center gap-2 bg-slate-800 rounded-full px-3 py-1.5 transition-all duration-300"
+                            : "flex items-center justify-center w-8 h-8 rounded-full bg-slate-800/50 transition-all duration-300"
+                        }>
+                            <Search size={14} className={simStep === 'SEARCH' ? "text-slate-400" : "text-slate-500"} />
+                            {(simStep === 'SEARCH' || simStep === 'PLAYBACK' || simStep === 'JUMP') && (
+                                <span className="text-xs text-slate-300 min-w-[80px] origin-left">{searchText}<span className="animate-pulse">|</span></span>
+                            )}
+                        </div>
+
+                        {/* Controls - integrated here */}
+
+
+                        {/* User Profile */}
+                        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-white/10">
+                            <User size={14} className="text-slate-400" />
+                        </div>
                     </div>
                 </div>
 
-                {/* --- MAIN CONTENT AREA --- */}
-                <div className="flex-1 relative pt-14 p-6 flex flex-col items-center justify-center">
-
-                    {/* IDLE OVERLAY */}
+                {/* Main Content Area - Push down to avoid header overlap */}
+                <div className="absolute inset-x-0 bottom-0 top-16 bg-slate-900/50">
                     <AnimatePresence>
-                        {phase === 'IDLE' && (
+
+                        {/* Library/Search View */}
+                        {(simStep === 'LIBRARY' || simStep === 'SEARCH') && (
                             <motion.div
+                                key="library"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }} // Just fade out, let layoutId handle the movement
+                                className="absolute inset-0 p-4 space-y-3 overflow-y-auto no-scrollbar"
+                            >
+                                {filteredCalls.map((call, idx) => (
+                                    <motion.div
+                                        layoutId={`customer-card-${call.id}`}
+                                        key={call.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        // No transition delay on exit to make it snappy
+                                        className="bg-slate-800/50 border border-white/5 p-4 rounded-lg flex items-center justify-between hover:bg-slate-800/80 transition-colors cursor-pointer"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs">
+                                                {call.rep.split(' ').map(n => n[0]).join('')}
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-medium text-slate-200">{call.client}</div>
+                                                <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                                                    <User size={10} /> {call.rep}
+                                                    <Clock size={10} className="ml-2" /> {call.duration}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2">
+                                            {call.tags.map(t => (
+                                                <span key={t.text} className={`text-[10px] px-2 py-0.5 rounded-full text-white font-medium ${t.color} bg-opacity-20 border border-white/10`}>
+                                                    {t.text}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </motion.div>
+                        )}
+
+                        {/* Playback View */}
+                        {(simStep === 'PLAYBACK' || simStep === 'JUMP') && (
+                            <motion.div
+                                key="playback"
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                className="absolute inset-0 z-40 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center"
+                                className="absolute inset-0 flex flex-col bg-slate-950 z-10"
                             >
-                                <motion.button
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handlePlay}
-                                    className="group relative px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-widest text-sm rounded-full shadow-[0_0_30px_rgba(6,182,212,0.4)] transition-all"
+                                {/* Selected Customer Card (Persisted) */}
+                                <div className="p-4 border-b border-white/5 bg-slate-900/50">
+                                    <motion.div
+                                        layoutId="customer-card-1" // Must match the ID from the list
+                                        className="bg-slate-800/80 border border-white/10 p-4 rounded-lg flex items-center justify-between shadow-lg"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold text-xs">
+                                                SJ
+                                            </div>
+                                            <div>
+                                                <div className="text-sm font-medium text-slate-200">Maersk Logistics</div>
+                                                <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                                                    <User size={10} /> Sarah J.
+                                                    <Clock size={10} className="ml-2" /> 12:05
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <span className="text-[10px] px-2 py-0.5 rounded-full text-white font-medium bg-orange-500 bg-opacity-20 border border-white/10">
+                                                Price Discussion
+                                            </span>
+                                            <span className="text-[10px] px-2 py-0.5 rounded-full text-white font-medium bg-red-500 bg-opacity-20 border border-white/10">
+                                                Urgent
+                                            </span>
+                                        </div>
+                                    </motion.div>
+                                </div>
+
+                                {/* Waveform Area */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2 }}
+                                    className="h-24 bg-slate-900/50 border-b border-white/5 flex items-center justify-center relative overflow-hidden shrink-0"
                                 >
-                                    <span className="relative z-10 flex items-center gap-2">
-                                        <Play size={16} fill="currentColor" /> Initialize Sentinel
-                                    </span>
-                                </motion.button>
+                                    {/* Dummy Waveform Bars */}
+                                    <div className="flex items-end gap-1 h-10">
+                                        {[...Array(40)].map((_, i) => (
+                                            <motion.div
+                                                key={i}
+                                                className="w-1.5 bg-purple-500/40 rounded-t-sm"
+                                                animate={{ height: [5, 15 + Math.random() * 20, 5] }}
+                                                transition={{ duration: 0.5 + Math.random(), repeat: Infinity }}
+                                            />
+                                        ))}
+                                    </div>
+
+                                    {/* Progress Overlay */}
+                                    <div
+                                        className="absolute inset-y-0 left-0 bg-purple-500/10 border-r border-purple-500 transition-all duration-75 ease-linear pointer-events-none"
+                                        style={{ width: `${waveformProgress}%` }}
+                                    />
+
+                                    {/* Jump Interaction Cursor */}
+                                    <AnimatePresence>
+                                        {simStep === 'JUMP' && waveformProgress < 70 && (
+                                            <motion.div
+                                                initial={{ opacity: 0, top: '50%', left: '40%' }}
+                                                animate={{ opacity: 1, top: '50%', left: '75%' }}
+                                                exit={{ opacity: 0 }}
+                                                transition={{ duration: 0.8, ease: "easeInOut" }}
+                                                className="absolute z-50 pointer-events-none"
+                                            >
+                                                <MousePointer2 className="text-white drop-shadow-lg fill-black" size={24} />
+                                                <div className="absolute -top-2 -left-2 w-4 h-4 rounded-full bg-white/30 animate-ping" />
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+
+                                {/* Transcript Area */}
+                                <div className="flex-1 p-6 space-y-4 overflow-y-auto relative no-scrollbar">
+                                    <div className="absolute top-0 left-0 w-full h-4 bg-gradient-to-b from-slate-950 to-transparent z-10" />
+
+                                    <motion.div
+                                        className="space-y-6"
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1, y: simStep === 'JUMP' ? -80 : 0 }}
+                                        transition={{ duration: 0.5, delay: 0.3 }}
+                                    >
+                                        {TRANSCRIPT.map((line, idx) => (
+                                            <div key={idx} className={`flex gap-4 ${simStep === 'JUMP' && idx === 0 ? 'opacity-30' : 'opacity-100'} transition-opacity duration-500`}>
+                                                <div className="text-xs font-mono text-slate-600 pt-1 w-12 text-right">{line.time}</div>
+                                                <div className="flex-1">
+                                                    <div className="text-xs text-slate-500 mb-1">{line.speaker}</div>
+                                                    <p className={`text-sm font-medium ${line.color} bg-white/5 p-2 rounded-lg border border-white/5 inline-block`}>
+                                                        <span className="mr-2 opacity-80">{line.marker}</span>
+                                                        {line.text}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {/* Filler Text */}
+                                        <div className="flex gap-4 opacity-30">
+                                            <div className="text-xs font-mono text-slate-600 pt-1 w-12 text-right">5:45</div>
+                                            <div className="flex-1">
+                                                <div className="text-xs text-slate-500 mb-1">Client</div>
+                                                <p className="text-sm text-slate-400">That sounds reasonable. Let's proceed.</p>
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                </div>
                             </motion.div>
                         )}
                     </AnimatePresence>
-
-
-                    {/* SCENE: RADAR + GRID */}
-                    <AnimatePresence mode='wait'>
-                        {(phase === 'IDLE' || phase === 'RADAR_SCAN') && (
-                            <motion.div
-                                key="grid"
-                                className="w-full max-w-sm"
-                                exit={{ opacity: 0, scale: 1.1, filter: 'blur(10px)' }}
-                            >
-                                <HexGrid
-                                    key={key}
-                                    clients={CLIENTS}
-                                    scanActive={phase === 'RADAR_SCAN' && isPlaying}
-                                    onTargetFound={handleTargetFound}
-                                />
-                            </motion.div>
-                        )}
-
-                        {/* SCENE: DEEP DIVE */}
-                        {(phase === 'DEEP_DIVE' || phase === 'STRATEGY') && (
-                            <motion.div
-                                key="deep-dive"
-                                className="w-full max-w-sm h-full max-h-[320px]"
-                            >
-                                <DeepDiveCard onActionClick={handleStrategyClick} />
-                            </motion.div>
-                        )}
-
-                        {/* SCENE: EXECUTION */}
-                        {(phase === 'EXECUTION' || phase === 'RESOLVED') && (
-                            <motion.div
-                                key="execution"
-                                className="w-full max-w-sm h-full max-h-[300px]"
-                            >
-                                <ExecutionView isPlaying={isPlaying} onComplete={handleExecutionComplete} />
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
                 </div>
+
+                <SimulationControls
+                    state={state}
+                    className="scale-90 mr-6"
+                    onPlay={() => setState('playing')}
+                    onPause={() => setState('paused')}
+                    onStop={() => setState('idle')}
+                />
+
             </div>
         </ClientOnly>
     );

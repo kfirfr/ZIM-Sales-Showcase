@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
-import { motion, useMotionTemplate, useMotionValue } from "framer-motion";
+import { motion, useMotionTemplate, useMotionValue, useInView } from "framer-motion";
 import { AnimatedTitle } from "./AnimatedTitle";
 import { FeatureCardProvider } from "./FeatureCardContext";
 
@@ -82,6 +82,20 @@ export const ObsidianFeatureCard = ({ title, description, badge, children, color
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
     const variant = colorVariants[color] || colorVariants.teal;
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isInView = useInView(containerRef, { once: true, margin: "0px 0px 400px 0px" });
+    const [isLoaded, setIsLoaded] = React.useState(false);
+
+    // Deferred loading to prevent animation jank/flash
+    React.useEffect(() => {
+        if (isInView) {
+            // Small delay to let the card settle before rendering heavy simulation
+            const timer = setTimeout(() => {
+                setIsLoaded(true);
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [isInView]);
 
     function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
         const { left, top } = currentTarget.getBoundingClientRect();
@@ -112,38 +126,53 @@ export const ObsidianFeatureCard = ({ title, description, badge, children, color
             />
 
             {/* Inner Content */}
-            <div className="relative z-20 flex flex-col h-full">
+            <FeatureCardProvider>
+                <div className="relative z-20 flex flex-col h-full">
 
-                {/* Header Portion */}
-                <div className="p-8 pb-4">
-                    <div className="flex items-center justify-between mb-4">
-                        {badge && (
-                            <span className={`inline-block rounded-full px-3 py-1 text-[10px] uppercase tracking-wider font-bold ${variant.badgeClass} backdrop-blur-md`}>
-                                {badge}
-                            </span>
-                        )}
-                        {/* Decorative dot */}
-                        <div className={`w-1.5 h-1.5 rounded-full ${variant.badgeClass.replace('bg-', 'bg-').split(' ')[0]} animate-pulse`} />
+                    {/* Header Portion */}
+                    <div className="p-8 pb-4">
+                        <div className="flex items-center justify-between mb-4">
+                            {badge && (
+                                <span className={`inline-block rounded-full px-3 py-1 text-[10px] uppercase tracking-wider font-bold ${variant.badgeClass} backdrop-blur-md`}>
+                                    {badge}
+                                </span>
+                            )}
+                            {/* Decorative dot */}
+                            <div className={`w-1.5 h-1.5 rounded-full ${variant.badgeClass.replace('bg-', 'bg-').split(' ')[0]} animate-pulse`} />
+                        </div>
+
+                        <AnimatedTitle className={`text-3xl font-bold mb-3 tracking-tight bg-clip-text text-transparent bg-gradient-to-r ${variant.titleGradientClass}`} as="h3">
+                            {title}
+                        </AnimatedTitle>
+
+                        <p className="text-slate-400/90 leading-relaxed text-sm font-light">
+                            {description}
+                        </p>
                     </div>
 
-                    <AnimatedTitle className={`text-3xl font-bold mb-3 tracking-tight bg-clip-text text-transparent bg-gradient-to-r ${variant.titleGradientClass}`} as="h3">
-                        {title}
-                    </AnimatedTitle>
-
-                    <p className="text-slate-400/90 leading-relaxed text-sm font-light">
-                        {description}
-                    </p>
-                </div>
-
-                {/* Content/Simulation Area - Grows to fill */}
-                <FeatureCardProvider>
-                    <div className="flex-1 w-full relative min-h-[360px] mt-4 overflow-hidden rounded-b-3xl">
+                    {/* Content/Simulation Area - Grows to fill */}
+                    <div ref={containerRef} className="flex-1 w-full relative min-h-[400px] mt-4 overflow-hidden rounded-b-3xl transform-gpu will-change-transform bg-slate-950/20">
                         {/* Subtle gradient overlay at top of sim area to blend with header */}
                         <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-black/20 to-transparent z-10 pointer-events-none" />
-                        {children}
+
+                        {isLoaded ? (
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.5 }}
+                                className="w-full h-full"
+                            >
+                                {children}
+                            </motion.div>
+                        ) : (
+                            // Stable Skeleton Placeholder - matches bg color to avoid flash
+                            <div className="w-full h-full bg-slate-950/50 flex items-center justify-center">
+                                <div className="w-8 h-8 rounded-full border-2 border-slate-800 border-t-slate-600 animate-spin opacity-20" />
+                            </div>
+                        )}
                     </div>
-                </FeatureCardProvider>
-            </div>
+                </div>
+            </FeatureCardProvider>
 
         </motion.div>
     );

@@ -24,7 +24,7 @@ export const FeatureCardProvider: React.FC<{ children: ReactNode }> = ({ childre
         <FeatureCardContext.Provider value={{ setControls }}>
             <div className="relative h-full flex flex-col">
                 {/* Controls Slot - Absolute Top Right of the CARD */}
-                <div className="absolute top-0 right-0 z-50">
+                <div className="absolute top-8 right-8 z-50">
                     {controls}
                 </div>
                 {children}
