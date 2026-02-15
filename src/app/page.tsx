@@ -12,29 +12,8 @@ import { FeatureShowcase } from '@/components/FeatureShowcase';
 import { VisionaryFooter } from '@/components/VisionaryFooter';
 
 // Performance: Dynamically import heavy components with THREE.js / particle systems
-const CardStream = dynamic(
-    () => import('@/components/CardStream').then(mod => mod.CardStream),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="w-full h-[600px] my-20 flex items-center justify-center">
-                <div className="animate-pulse-slow text-white/30 text-sm">Loading...</div>
-            </div>
-        ),
-    }
-);
 
-const ZimParticleLogo = dynamic(
-    () => import('@/components/ZimParticleLogo').then(mod => mod.ZimParticleLogo),
-    {
-        ssr: false,
-        loading: () => (
-            <div className="w-full h-[500px] my-16 flex items-center justify-center">
-                <div className="animate-pulse-slow text-white/30 text-sm">Loading particle effect...</div>
-            </div>
-        ),
-    }
-);
+
 
 export default function Home() {
     const [isIntroReached, setIsIntroReached] = React.useState(false);
@@ -63,11 +42,8 @@ export default function Home() {
             {/* Neural Spine Connection */}
             <NeuralSpine />
 
-            {/* Interactive Card Stream */}
-            <CardStream />
 
-            {/* Zim Particle Logo */}
-            <ZimParticleLogo />
+
 
             {/* Transitional Intro */}
             <DeploymentIntro onReached={() => setIsIntroReached(true)} />

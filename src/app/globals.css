@@ -92,6 +92,33 @@ body {
     animation: gradient-x 6s ease infinite;
   }
 
+  .revenue-shimmer {
+    background: linear-gradient(to right, #10b981, #34d399, #059669, #34d399);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    background-size: 300% 100%;
+    animation: gradient-x 6s ease infinite;
+  }
+
+  .speed-shimmer {
+    background: linear-gradient(to right, #22d3ee, #60a5fa, #0891b2, #60a5fa);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    background-size: 300% 100%;
+    animation: gradient-x 6s ease infinite;
+  }
+
+  .insight-shimmer {
+    background: linear-gradient(to right, #8b5cf6, #d946ef, #7c3aed, #d946ef);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    background-size: 300% 100%;
+    animation: gradient-x 6s ease infinite;
+  }
+
   @keyframes gradient-x {
     0% {
       background-position: 0% 50%;

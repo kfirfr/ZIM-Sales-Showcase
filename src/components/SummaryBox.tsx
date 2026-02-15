@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SimulationControls, SimulationState } from './SimulationControls';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ClientOnly } from './ClientOnly';
-import { Phone, Mic, Database, Check, Bot, User } from 'lucide-react';
+import { Phone, Mic, Database, Check, Bot, User, Headphones, Sparkles } from 'lucide-react';
+import CallPlayerModal from './CallPlayerModal';
 
 // --- Types ---
 type Phase = 'idle' | 'dialing' | 'interview' | 'processing' | 'crm_update';
@@ -42,6 +43,7 @@ export const PostMeetingAutopilotBox = () => {
     const [visibleCrmFields, setVisibleCrmFields] = useState<number>(0);
     const [crmSuccess, setCrmSuccess] = useState(false);
     const [processingText, setProcessingText] = useState("");
+    const [isPlayerOpen, setIsPlayerOpen] = useState(false);
 
     // --- Refs ---
     const stateRef = useRef(state);
@@ -173,6 +175,16 @@ export const PostMeetingAutopilotBox = () => {
     return (
         <ClientOnly>
             <div className="relative w-full h-full min-h-[400px] bg-slate-950 flex flex-col items-center justify-center overflow-hidden font-sans select-none">
+
+                {/* Play Recording Trigger */}
+                <button
+                    onClick={() => setIsPlayerOpen(true)}
+                    className="absolute top-6 right-6 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/50 border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 hover:border-slate-500 transition-all text-xs font-medium group"
+                    aria-label="Experience Voice AI Interactive Demo"
+                >
+                    <Sparkles size={14} className="group-hover:text-cyan-400 transition-colors" />
+                    <span>Experience Voice AI</span>
+                </button>
 
                 <SimulationControls
                     state={state}
@@ -390,6 +402,11 @@ export const PostMeetingAutopilotBox = () => {
                     )}
 
                 </AnimatePresence>
+
+                <CallPlayerModal
+                    isOpen={isPlayerOpen}
+                    onClose={() => setIsPlayerOpen(false)}
+                />
             </div>
         </ClientOnly>
     );
@@ -403,20 +420,20 @@ const ChatBubble: React.FC<{ role: 'ai' | 'user'; text: string; isTyping?: boole
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.25 }}
-            className={`flex items-start gap-2 ${isAI ? '' : 'flex-row-reverse'}`}
+            className={`flex items-start gap-3 ${isAI ? '' : 'flex-row-reverse'}`}
         >
             {/* Avatar */}
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isAI
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${isAI
                 ? 'bg-emerald-500/20 border border-emerald-500/40'
                 : 'bg-blue-500/20 border border-blue-500/40'
                 }`}>
-                {isAI ? <Bot size={13} className="text-emerald-400" /> : <User size={13} className="text-blue-400" />}
+                {isAI ? <Bot size={14} className="text-emerald-400" /> : <User size={14} className="text-blue-400" />}
             </div>
 
             {/* Bubble */}
-            <div className={`max-w-[85%] px-3 py-2 rounded-xl text-sm leading-relaxed ${isAI
-                ? 'bg-slate-800/80 text-slate-200 rounded-tl-sm'
-                : 'bg-blue-600/20 text-blue-100 rounded-tr-sm'
+            <div className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${isAI
+                ? 'bg-slate-800/90 text-slate-200 rounded-tl-sm border border-slate-700/50'
+                : 'bg-blue-600/20 text-blue-100 rounded-tr-sm border border-blue-500/20'
                 }`}>
                 {text}
                 {isTyping && (

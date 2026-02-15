@@ -15,8 +15,8 @@ const usePageVisibility = () => {
     return isVisibleRef;
 };
 
-// Define 3 zones for balanced distribution
-const ZONES = 3;
+// Define 2 zones for balanced distribution (Reduced from 3 for performance)
+const ZONES = 2;
 
 interface Star {
     x: number;
@@ -40,7 +40,9 @@ export const BackgroundNeuralStars = ({ className }: BackgroundNeuralStarsProps)
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d'); // Optimization: Reverted alpha: false because it made the background pitch black.
+        // Actually, this component is usually an overlay or underlay. If it's -z-10, it might need transparency if there's something behind it.
+        // But let's stick to standard context for now to avoid issues, just reduce count.
         if (!ctx) return;
 
         let animationFrameId: number;
@@ -62,17 +64,21 @@ export const BackgroundNeuralStars = ({ className }: BackgroundNeuralStarsProps)
             width = canvas.clientWidth || window.innerWidth;
             height = canvas.clientHeight || window.innerHeight;
 
-            canvas.width = width;
-            canvas.height = height;
+            // Handle high DPI displays
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
 
-            // Total stars: 30-50. Let's aim for ~45 (15 per zone) to be safe and balanced.
-            const starsPerZone = 15;
+            // Total stars: Reduced count for performance.
+            // 15 stars total (7-8 per zone) is enough for a subtle effect.
+            const starsPerZone = 8;
             const totalStars = starsPerZone * ZONES;
 
             stars = [];
 
             for (let i = 0; i < totalStars; i++) {
-                const zone = i % ZONES; // 0, 1, 2
+                const zone = i % ZONES; // 0, 1
                 const { x, y } = getRandomPosInZone(zone, width, height);
 
                 // Randomize initial phase so they don't all start fading in at once
@@ -85,8 +91,8 @@ export const BackgroundNeuralStars = ({ className }: BackgroundNeuralStarsProps)
                 stars.push({
                     x,
                     y,
-                    maxSize: Math.random() * (6 - 2) + 2, // 2px - 6px
-                    maxOpacity: Math.random() * (1.0 - 0.4) + 0.4, // 0.4 - 1.0 peak brightness
+                    maxSize: Math.random() * (4 - 2) + 2, // 2px - 4px (Reduced max size slightly)
+                    maxOpacity: Math.random() * (0.8 - 0.3) + 0.3, // Reduced max opacity slightly
                     phase: Math.random() * Math.PI,
                     speed: (Math.random() * (0.0087 - 0.0065)) + 0.0065, // ~6s - 8s total lifecycle
                     zone
@@ -120,7 +126,7 @@ export const BackgroundNeuralStars = ({ className }: BackgroundNeuralStarsProps)
                 return;
             }
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, width, height); // Clear based on logical size
 
             stars.forEach(star => {
                 // Update phase
@@ -134,8 +140,8 @@ export const BackgroundNeuralStars = ({ className }: BackgroundNeuralStarsProps)
                     star.x = x;
                     star.y = y;
                     // Randomize traits again for variety
-                    star.maxSize = Math.random() * (6 - 2) + 2;
-                    star.maxOpacity = Math.random() * (1.0 - 0.4) + 0.4;
+                    star.maxSize = Math.random() * (4 - 2) + 2;
+                    star.maxOpacity = Math.random() * (0.8 - 0.3) + 0.3;
                     star.speed = (Math.random() * (0.0087 - 0.0065)) + 0.0065;
                 }
 

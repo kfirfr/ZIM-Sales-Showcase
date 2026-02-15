@@ -83,19 +83,6 @@ export const ObsidianFeatureCard = ({ title, description, badge, children, color
     const mouseY = useMotionValue(0);
     const variant = colorVariants[color] || colorVariants.teal;
     const containerRef = useRef<HTMLDivElement>(null);
-    const isInView = useInView(containerRef, { once: true, margin: "0px 0px 400px 0px" });
-    const [isLoaded, setIsLoaded] = React.useState(false);
-
-    // Deferred loading to prevent animation jank/flash
-    React.useEffect(() => {
-        if (isInView) {
-            // Small delay to let the card settle before rendering heavy simulation
-            const timer = setTimeout(() => {
-                setIsLoaded(true);
-            }, 100);
-            return () => clearTimeout(timer);
-        }
-    }, [isInView]);
 
     function handleMouseMove({ currentTarget, clientX, clientY }: React.MouseEvent) {
         const { left, top } = currentTarget.getBoundingClientRect();
@@ -104,12 +91,9 @@ export const ObsidianFeatureCard = ({ title, description, badge, children, color
     }
 
     return (
-        <motion.div
+        <div
             className={`group relative rounded-3xl obsidian-glass overflow-hidden transition-all duration-500 ${className} ${variant.borderGlow}`}
             onMouseMove={handleMouseMove}
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
         >
             {/* Spotlight Effect */}
             <motion.div
@@ -155,25 +139,13 @@ export const ObsidianFeatureCard = ({ title, description, badge, children, color
                         {/* Subtle gradient overlay at top of sim area to blend with header */}
                         <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-black/20 to-transparent z-10 pointer-events-none" />
 
-                        {isLoaded ? (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.5 }}
-                                className="w-full h-full"
-                            >
-                                {children}
-                            </motion.div>
-                        ) : (
-                            // Stable Skeleton Placeholder - matches bg color to avoid flash
-                            <div className="w-full h-full bg-slate-950/50 flex items-center justify-center">
-                                <div className="w-8 h-8 rounded-full border-2 border-slate-800 border-t-slate-600 animate-spin opacity-20" />
-                            </div>
-                        )}
+                        <div className="w-full h-full">
+                            {children}
+                        </div>
                     </div>
                 </div>
             </FeatureCardProvider>
 
-        </motion.div>
+        </div>
     );
 };

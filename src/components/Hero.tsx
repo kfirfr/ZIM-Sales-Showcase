@@ -87,7 +87,7 @@ export const Hero = () => {
                             className="relative z-20"
                         >
                             {/* Optical alignment nudge to match the paragraph text below */}
-                            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none text-white mb-6 -ml-[4px]">
+                            <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-none text-white mb-6 -ml-[4px]" aria-label="AI and CX Orchestration">
                                 <span className="quattro-gradient">AI & CX<br />Orchestration</span>
                             </h1>
                         </motion.div>

@@ -30,7 +30,7 @@ export const DeploymentIntro = ({ onReached }: DeploymentIntroProps) => {
     }, [isInView, onReached]);
 
     return (
-        <section id="deployments" ref={ref} className="relative py-20 flex flex-col items-center justify-center overflow-visible w-full text-center px-4">
+        <section id="deployments" ref={ref} className="relative py-20 flex flex-col items-center justify-center overflow-visible w-full text-center px-4 scroll-mt-32">
 
             {/* Title Block */}
             <div className="mb-8">

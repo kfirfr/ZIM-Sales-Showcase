@@ -37,15 +37,15 @@ export const Navbar = () => {
                         : "bg-transparent border-transparent w-full"
                 )}
             >
-                <div className="flex items-center gap-3">
+                <Link href="/" className="flex items-center gap-3" aria-label="ZIM AI Showcase Home">
                     <img
                         src="/zim80-logo.png"
                         alt="ZIM Logo"
                         className="h-10 w-auto object-contain"
                     />
-                    <div className="w-px h-6 bg-white/20 mx-1" />
-                    <span className="text-white font-semibold tracking-tight text-sm">AI SHOWCASE</span>
-                </div>
+                    <div className="hidden sm:block w-px h-6 bg-white/20 mx-1" />
+                    <span className="hidden sm:block text-white font-semibold tracking-tight text-sm">AI SHOWCASE</span>
+                </Link>
 
                 <div className="hidden md:flex items-center gap-3">
                     <a
@@ -56,31 +56,7 @@ export const Navbar = () => {
                         }}
                         className="group relative px-4 py-2 rounded-full text-xs font-bold text-white/90 hover:text-white uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 hover:scale-105"
                     >
-                        <span className="relative z-10">2025 AI</span>
-                        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 rounded-full transition-all duration-300" />
-                        <div className="absolute inset-0 bg-zim-teal/0 group-hover:bg-zim-teal/20 rounded-full blur-md transition-all duration-300" />
-                    </a>
-                    <a
-                        href="#innovations"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            document.getElementById('innovations')?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className="group relative px-4 py-2 rounded-full text-xs font-bold text-white/90 hover:text-white uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 hover:scale-105"
-                    >
-                        <span className="relative z-10">2026 AI</span>
-                        <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 rounded-full transition-all duration-300" />
-                        <div className="absolute inset-0 bg-zim-teal/0 group-hover:bg-zim-teal/20 rounded-full blur-md transition-all duration-300" />
-                    </a>
-                    <a
-                        href="#roadmap"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            document.getElementById('roadmap')?.scrollIntoView({ behavior: 'smooth' });
-                        }}
-                        className="group relative px-4 py-2 rounded-full text-xs font-bold text-white/90 hover:text-white uppercase tracking-[0.15em] cursor-pointer transition-all duration-300 hover:scale-105 whitespace-nowrap"
-                    >
-                        <span className="relative z-10">Strategic AI Roadmap</span>
+                        <span className="relative z-10">Genesys for Sales</span>
                         <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 rounded-full transition-all duration-300" />
                         <div className="absolute inset-0 bg-zim-teal/0 group-hover:bg-zim-teal/20 rounded-full blur-md transition-all duration-300" />
                     </a>
